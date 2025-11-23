@@ -1,79 +1,28 @@
 import { Platform } from 'react-native';
-import AppleHealthKit, {
-  HealthValue,
-  HealthKitPermissions,
-} from 'react-native-health';
 import { healthAPI } from './api';
 
-// Health permissions
-const permissions: HealthKitPermissions = {
-  permissions: {
-    read: [
-      AppleHealthKit.Constants.Permissions.Steps,
-      AppleHealthKit.Constants.Permissions.SleepAnalysis,
-      AppleHealthKit.Constants.Permissions.Height,
-      AppleHealthKit.Constants.Permissions.Weight,
-      AppleHealthKit.Constants.Permissions.DateOfBirth,
-      AppleHealthKit.Constants.Permissions.BiologicalSex,
-    ],
-    write: [],
-  },
-};
+// Health data integration - To be implemented with native modules
+// For iOS: Will use HealthKit
+// For Android: Will use Health Connect
 
 // ==================== iOS HealthKit ====================
 
 export const initializeHealthKit = async (): Promise<boolean> => {
   if (Platform.OS !== 'ios') return false;
 
-  return new Promise((resolve) => {
-    AppleHealthKit.initHealthKit(permissions, (error: string) => {
-      if (error) {
-        console.error('HealthKit initialization failed:', error);
-        resolve(false);
-      } else {
-        resolve(true);
-      }
-    });
-  });
+  // TODO: Implement HealthKit with react-native-health or similar package
+  // For now, users will log manually
+  console.log('HealthKit integration - To be implemented');
+  return false;
 };
 
 export const getHealthKitData = async (): Promise<any> => {
   if (Platform.OS !== 'ios') return null;
 
-  return new Promise((resolve) => {
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    // Get sleep analysis
-    const sleepOptions = {
-      startDate: yesterday.toISOString(),
-      endDate: today.toISOString(),
-    };
-
-    AppleHealthKit.getSleepSamples(sleepOptions, (err: any, results: any[]) => {
-      if (err) {
-        console.error('Failed to fetch sleep data:', err);
-        resolve(null);
-        return;
-      }
-
-      let sleepHours = null;
-      if (results && results.length > 0) {
-        const totalMinutes = results.reduce((sum, sample) => {
-          const start = new Date(sample.startDate).getTime();
-          const end = new Date(sample.endDate).getTime();
-          return sum + (end - start) / 1000 / 60;
-        }, 0);
-        sleepHours = `${(totalMinutes / 60).toFixed(1)}hr`;
-      }
-
-      resolve({
-        sleepHours,
-        steps: 0, // Will implement separately
-      });
-    });
-  });
+  // TODO: Implement when HealthKit package is added
+  // Will fetch: sleep, steps, height, weight, DOB, sex
+  console.log('HealthKit data fetch - To be implemented');
+  return null;
 };
 
 // ==================== Android Health Connect ====================
