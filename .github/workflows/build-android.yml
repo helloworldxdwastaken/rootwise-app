@@ -32,11 +32,16 @@ jobs:
       - name: Prebuild Android native project
         run: npx expo prebuild --platform android --clean
 
+      - name: Clean Gradle caches
+        run: |
+          cd android
+          ./gradlew clean --no-daemon
+
       - name: Build Android APK (Debug - Unsigned)
         run: |
           set -o pipefail
           cd android
-          ./gradlew assembleDebug --no-daemon --stacktrace --info --warning-mode all 2>&1 | tee ../android-build.log
+          ./gradlew assembleDebug --no-daemon --refresh-dependencies --stacktrace --info --warning-mode all 2>&1 | tee ../android-build.log
 
       - name: List build outputs
         if: success()
