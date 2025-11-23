@@ -1,151 +1,99 @@
 import { Platform } from 'react-native';
-import * as AppleHealthKit from 'expo-apple-health';
-import * as HealthConnect from 'expo-health-connect';
+import AppleHealthKit, {
+  HealthValue,
+  HealthKitPermissions,
+} from 'react-native-health';
 import { healthAPI } from './api';
+
+// Health permissions
+const permissions: HealthKitPermissions = {
+  permissions: {
+    read: [
+      AppleHealthKit.Constants.Permissions.Steps,
+      AppleHealthKit.Constants.Permissions.SleepAnalysis,
+      AppleHealthKit.Constants.Permissions.Height,
+      AppleHealthKit.Constants.Permissions.Weight,
+      AppleHealthKit.Constants.Permissions.DateOfBirth,
+      AppleHealthKit.Constants.Permissions.BiologicalSex,
+    ],
+    write: [],
+  },
+};
 
 // ==================== iOS HealthKit ====================
 
-export const initializeHealthKit = async () => {
+export const initializeHealthKit = async (): Promise<boolean> => {
   if (Platform.OS !== 'ios') return false;
 
-  try {
-    const isAvailable = await AppleHealthKit.isAvailable();
-    if (!isAvailable) return false;
-
-    await AppleHealthKit.requestPermissions([
-      'STEPS',
-      'SLEEP_ANALYSIS',
-      'HEIGHT',
-      'WEIGHT',
-      'DATE_OF_BIRTH',
-      'BIOLOGICAL_SEX',
-      'HEART_RATE',
-    ]);
-
-    return true;
-  } catch (error) {
-    console.error('HealthKit initialization failed:', error);
-    return false;
-  }
+  return new Promise((resolve) => {
+    AppleHealthKit.initHealthKit(permissions, (error: string) => {
+      if (error) {
+        console.error('HealthKit initialization failed:', error);
+        resolve(false);
+      } else {
+        resolve(true);
+      }
+    });
+  });
 };
 
-export const getHealthKitData = async () => {
+export const getHealthKitData = async (): Promise<any> => {
   if (Platform.OS !== 'ios') return null;
 
-  try {
+  return new Promise((resolve) => {
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
 
-    // Get sleep (last night)
-    const sleepData = await AppleHealthKit.getSleepSamples({
+    // Get sleep analysis
+    const sleepOptions = {
       startDate: yesterday.toISOString(),
       endDate: today.toISOString(),
-    });
-
-    let sleepHours = null;
-    if (sleepData && sleepData.length > 0) {
-      const totalMinutes = sleepData.reduce((sum: number, sample: any) => {
-        const start = new Date(sample.startDate).getTime();
-        const end = new Date(sample.endDate).getTime();
-        return sum + (end - start) / 1000 / 60;
-      }, 0);
-      sleepHours = `${(totalMinutes / 60).toFixed(1)}hr`;
-    }
-
-    // Get steps (today)
-    const stepsData = await AppleHealthKit.getStepCount({
-      startDate: today.toISOString(),
-    });
-
-    // Get biological data (one-time)
-    const bioData = await AppleHealthKit.getBiologicalSex();
-    const dateOfBirth = await AppleHealthKit.getDateOfBirth();
-    const height = await AppleHealthKit.getLatestHeight();
-    const weight = await AppleHealthKit.getLatestWeight();
-
-    return {
-      sleepHours,
-      steps: stepsData?.value || 0,
-      biologicalSex: bioData?.value,
-      dateOfBirth: dateOfBirth?.value,
-      height: height?.value, // in cm
-      weight: weight?.value, // in kg
     };
-  } catch (error) {
-    console.error('Failed to fetch HealthKit data:', error);
-    return null;
-  }
+
+    AppleHealthKit.getSleepSamples(sleepOptions, (err: any, results: any[]) => {
+      if (err) {
+        console.error('Failed to fetch sleep data:', err);
+        resolve(null);
+        return;
+      }
+
+      let sleepHours = null;
+      if (results && results.length > 0) {
+        const totalMinutes = results.reduce((sum, sample) => {
+          const start = new Date(sample.startDate).getTime();
+          const end = new Date(sample.endDate).getTime();
+          return sum + (end - start) / 1000 / 60;
+        }, 0);
+        sleepHours = `${(totalMinutes / 60).toFixed(1)}hr`;
+      }
+
+      resolve({
+        sleepHours,
+        steps: 0, // Will implement separately
+      });
+    });
+  });
 };
 
 // ==================== Android Health Connect ====================
+// Note: Android Health Connect requires additional native setup
+// For now, Android users will log manually
 
 export const initializeHealthConnect = async () => {
   if (Platform.OS !== 'android') return false;
-
-  try {
-    const isAvailable = await HealthConnect.isAvailable();
-    if (!isAvailable) return false;
-
-    await HealthConnect.requestPermissions([
-      { accessType: 'read', recordType: 'Steps' },
-      { accessType: 'read', recordType: 'SleepSession' },
-      { accessType: 'read', recordType: 'Height' },
-      { accessType: 'read', recordType: 'Weight' },
-    ]);
-
-    return true;
-  } catch (error) {
-    console.error('Health Connect initialization failed:', error);
-    return false;
-  }
+  
+  // TODO: Implement Google Fit / Health Connect
+  // Requires: react-native-google-fit or similar
+  console.log('Android Health Connect not yet implemented');
+  return false;
 };
 
 export const getHealthConnectData = async () => {
   if (Platform.OS !== 'android') return null;
-
-  try {
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    // Get sleep
-    const sleepData = await HealthConnect.readRecords('SleepSession', {
-      timeRangeFilter: {
-        operator: 'between',
-        startTime: yesterday.toISOString(),
-        endTime: today.toISOString(),
-      },
-    });
-
-    let sleepHours = null;
-    if (sleepData && sleepData.length > 0) {
-      const totalMinutes = sleepData.reduce((sum: number, session: any) => {
-        const duration = session.endTime - session.startTime;
-        return sum + duration / 1000 / 60;
-      }, 0);
-      sleepHours = `${(totalMinutes / 60).toFixed(1)}hr`;
-    }
-
-    // Get steps
-    const stepsData = await HealthConnect.readRecords('Steps', {
-      timeRangeFilter: {
-        operator: 'between',
-        startTime: today.toISOString(),
-        endTime: new Date().toISOString(),
-      },
-    });
-
-    const totalSteps = stepsData.reduce((sum: number, record: any) => sum + record.count, 0);
-
-    return {
-      sleepHours,
-      steps: totalSteps,
-    };
-  } catch (error) {
-    console.error('Failed to fetch Health Connect data:', error);
-    return null;
-  }
+  
+  // TODO: Implement when Health Connect SDK available
+  return null;
 };
 
 // ==================== Unified Interface ====================

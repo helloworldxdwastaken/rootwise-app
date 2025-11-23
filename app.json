@@ -40,19 +40,7 @@
       "bundler": "metro"
     },
     "plugins": [
-      "expo-router",
-      [
-        "expo-apple-health",
-        {
-          "healthSharePermission": "Allow Rootwise to read your health data for personalized insights"
-        }
-      ],
-      [
-        "expo-health-connect",
-        {
-          "permissions": ["READ_STEPS", "READ_SLEEP", "READ_HEIGHT", "READ_WEIGHT"]
-        }
-      ]
+      "expo-router"
     ],
     "scheme": "rootwise",
     "extra": {
