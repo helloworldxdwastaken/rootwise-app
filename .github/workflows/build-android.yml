@@ -32,17 +32,58 @@ jobs:
       - name: Prebuild Android native project
         run: npx expo prebuild --platform android --clean
 
+      - name: Fix hermesEnabled property in build.gradle
+        run: |
+          if [ -f android/app/build.gradle ]; then
+            echo "Patching android/app/build.gradle for hermesEnabled..."
+            
+            # Simple approach: prepend the definition to the file
+            if ! grep -q "def hermesEnabled" android/app/build.gradle; then
+              # Create backup
+              cp android/app/build.gradle android/app/build.gradle.backup
+              
+              # Prepend the hermesEnabled definition
+              echo "def hermesEnabled = (findProperty('react.enableHermes') != null) ? findProperty('react.enableHermes').toBoolean() : true" > /tmp/hermes_prefix.txt
+              echo "" >> /tmp/hermes_prefix.txt
+              cat android/app/build.gradle >> /tmp/hermes_prefix.txt
+              mv /tmp/hermes_prefix.txt android/app/build.gradle
+              
+              echo "✅ hermesEnabled definition added"
+            else
+              echo "✅ hermesEnabled already defined"
+            fi
+            
+            echo ""
+            echo "First 5 lines of build.gradle:"
+            head -5 android/app/build.gradle
+          else
+            echo "⚠️ android/app/build.gradle not found"
+          fi
+
       - name: Configure Gradle properties for stability
         run: |
           cat <<EOF > android/gradle.properties
+          # Gradle Performance
           org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -XX:+HeapDumpOnOutOfMemoryError
           org.gradle.parallel=true
           org.gradle.caching=true
           org.gradle.configureondemand=false
+          
+          # Android
           android.useAndroidX=true
           android.enableJetifier=true
+          
+          # Kotlin
           kotlin.code.style=official
           kotlin.incremental=false
+          
+          # React Native / Expo
+          react.enableHermes=true
+          hermesEnabled=true
+          newArchEnabled=false
+          
+          # Flipper (disabled for release builds)
+          FLIPPER_VERSION=0.182.0
           EOF
 
       - name: Clean Gradle caches
