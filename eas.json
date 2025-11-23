@@ -1,7 +1,6 @@
 {
   "cli": {
-    "version": ">= 7.0.0",
-    "appVersionSource": "remote"
+    "version": ">= 7.0.0"
   },
   "build": {
     "development": {
@@ -13,13 +12,15 @@
       "ios": {
         "simulator": false,
         "resourceClass": "m-medium"
-      }
+      },
+      "credentialsSource": "remote"
     },
     "preview-android": {
       "distribution": "internal",
       "android": {
         "buildType": "apk"
-      }
+      },
+      "credentialsSource": "remote"
     },
     "production-ios": {
       "distribution": "store",

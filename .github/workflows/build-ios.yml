@@ -29,11 +29,11 @@ jobs:
           expo-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Build iOS (Production)
-        run: npx eas-cli build --platform ios --profile production-ios --non-interactive
+      - name: Build iOS (Preview - Testing)
+        run: npx eas-cli build --platform ios --profile preview-ios --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
       - name: Build Complete
-        run: echo "✅ iOS build submitted to EAS. Check https://expo.dev for download link."
+        run: echo "✅ iOS preview build submitted to EAS. Check https://expo.dev for download link."
 

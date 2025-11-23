@@ -29,11 +29,11 @@ jobs:
           expo-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Build Android (Production)
-        run: npx eas-cli build --platform android --profile production-android --non-interactive
+      - name: Build Android (Preview - Testing)
+        run: npx eas-cli build --platform android --profile preview-android --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
       - name: Build Complete
-        run: echo "✅ Android build submitted to EAS. Check https://expo.dev for download link."
+        run: echo "✅ Android preview build submitted to EAS. Check https://expo.dev for download link."
 
