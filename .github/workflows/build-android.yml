@@ -1,4 +1,4 @@
-name: Build Android
+name: Build Android (Unsigned - Testing)
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   build-android:
-    name: Build Android APK/AAB
+    name: Build Android APK (Unsigned)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -20,20 +20,31 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
-      - name: Setup Expo
-        uses: expo/expo-github-action@v8
-        with:
-          expo-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Prebuild Android native project
+        run: npx expo prebuild --platform android --clean
 
-      - name: Build Android (Preview - Testing)
-        run: npx eas-cli build --platform android --profile preview-android --non-interactive
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      - name: Build Android APK (Unsigned)
+        run: |
+          cd android
+          ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: Upload Android APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-unsigned-apk
+          path: android/app/build/outputs/apk/release/*.apk
+          retention-days: 30
 
       - name: Build Complete
-        run: echo "✅ Android preview build submitted to EAS. Check https://expo.dev for download link."
+        run: echo "✅ Unsigned Android APK ready for download from Artifacts"
 

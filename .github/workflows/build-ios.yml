@@ -1,4 +1,4 @@
-name: Build iOS
+name: Build iOS (Unsigned - Testing)
 
 on:
   push:
@@ -9,8 +9,8 @@ on:
 
 jobs:
   build-ios:
-    name: Build iOS IPA
-    runs-on: ubuntu-latest
+    name: Build iOS IPA (Unsigned)
+    runs-on: macos-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -23,17 +23,49 @@ jobs:
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
-      - name: Setup Expo
-        uses: expo/expo-github-action@v8
-        with:
-          expo-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Prebuild iOS native project
+        run: npx expo prebuild --platform ios --clean
 
-      - name: Build iOS (Preview - Testing)
-        run: npx eas-cli build --platform ios --profile preview-ios --non-interactive
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      - name: Install CocoaPods dependencies
+        run: |
+          cd ios
+          pod install
+
+      - name: Build iOS app (Unsigned)
+        run: |
+          cd ios
+          set -o pipefail
+          xcodebuild -workspace rootwiseapp.xcworkspace \
+            -scheme rootwiseapp \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -archivePath $PWD/build/rootwise.xcarchive \
+            archive \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            -allowProvisioningUpdates \
+            2>&1 | tee build.log | grep -E "error:|warning:|note:|===|Compiling|Linking|Building"
+
+      - name: Export IPA (Unsigned)
+        run: |
+          cd ios
+          xcodebuild -exportArchive \
+            -archivePath $PWD/build/rootwise.xcarchive \
+            -exportPath $PWD/build \
+            -exportOptionsPlist ../export-options-unsigned.plist \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO
+
+      - name: Upload iOS IPA
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-unsigned-ipa
+          path: ios/build/*.ipa
+          retention-days: 30
 
       - name: Build Complete
-        run: echo "✅ iOS preview build submitted to EAS. Check https://expo.dev for download link."
+        run: echo "✅ Unsigned iOS IPA ready for download from Artifacts"
 
