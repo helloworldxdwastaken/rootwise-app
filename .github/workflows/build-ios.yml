@@ -26,27 +26,37 @@ jobs:
       - name: Prebuild iOS native project
         run: npx expo prebuild --platform ios --clean
 
+      - name: Clean CocoaPods cache
+        run: |
+          cd ios
+          pod cache clean --all || true
+          rm -rf ~/Library/Caches/CocoaPods || true
+          rm -rf Pods || true
+          rm -rf build || true
+
       - name: Install CocoaPods dependencies
         run: |
           cd ios
-          pod install
+          pod install --repo-update
 
       - name: Build iOS app (Unsigned)
         run: |
           cd ios
           set -o pipefail
+          xcodebuild clean -workspace Rootwise.xcworkspace -scheme Rootwise || true
           xcodebuild -workspace Rootwise.xcworkspace \
             -scheme Rootwise \
             -configuration Release \
             -sdk iphoneos \
             -destination 'generic/platform=iOS' \
+            -derivedDataPath build/DerivedData \
             -archivePath $PWD/build/rootwise.xcarchive \
             archive \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             -allowProvisioningUpdates \
-            2>&1 | tee build.log | grep -E "error:|warning:|note:|===|Compiling|Linking|Building"
+            2>&1 | tee ../ios-build.log
 
       - name: Create IPA (unsigned)
         run: |
@@ -63,6 +73,15 @@ jobs:
           name: rootwise-unsigned-ipa
           path: ios/Rootwise.ipa
           retention-days: 30
+
+      - name: Upload iOS Build Log on Failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build-log
+          path: ios-build.log
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Build Complete
         run: echo "✅ Unsigned iOS IPA ready for download from Artifacts"
