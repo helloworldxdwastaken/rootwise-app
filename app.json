@@ -1,0 +1,68 @@
+{
+  "expo": {
+    "name": "Rootwise",
+    "slug": "rootwise-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#fdf8f3"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.rootwise.app",
+      "infoPlist": {
+        "NSHealthShareUsageDescription": "Rootwise needs access to your health data to provide personalized wellness insights.",
+        "NSHealthUpdateUsageDescription": "Rootwise would like to save your wellness data to Apple Health."
+      },
+      "buildNumber": "1"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#fdf8f3"
+      },
+      "package": "com.rootwise.app",
+      "versionCode": 1,
+      "permissions": [
+        "ACTIVITY_RECOGNITION",
+        "android.permission.health.READ_STEPS",
+        "android.permission.health.READ_SLEEP",
+        "android.permission.health.READ_HEIGHT",
+        "android.permission.health.READ_WEIGHT"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-apple-health",
+        {
+          "healthSharePermission": "Allow Rootwise to read your health data for personalized insights"
+        }
+      ],
+      [
+        "expo-health-connect",
+        {
+          "permissions": ["READ_STEPS", "READ_SLEEP", "READ_HEIGHT", "READ_WEIGHT"]
+        }
+      ]
+    ],
+    "scheme": "rootwise",
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "your-project-id"
+      }
+    }
+  }
+}
+

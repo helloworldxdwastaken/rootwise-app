@@ -1,0 +1,53 @@
+{
+  "cli": {
+    "version": ">= 7.0.0"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview-ios": {
+      "distribution": "internal",
+      "ios": {
+        "simulator": false,
+        "resourceClass": "m-medium"
+      }
+    },
+    "preview-android": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "production-ios": {
+      "ios": {
+        "resourceClass": "m-medium",
+        "buildType": "release",
+        "bundleIdentifier": "com.rootwise.app"
+      }
+    },
+    "production-android": {
+      "android": {
+        "buildType": "app-bundle",
+        "gradleCommand": ":app:bundleRelease"
+      }
+    }
+  },
+  "submit": {
+    "production-ios": {
+      "ios": {
+        "appleId": "your-apple-id@email.com",
+        "ascAppId": "placeholder",
+        "appleTeamId": "placeholder"
+      }
+    },
+    "production-android": {
+      "android": {
+        "serviceAccountKeyPath": "./service-account-key.json",
+        "track": "internal"
+      }
+    }
+  }
+}
+
