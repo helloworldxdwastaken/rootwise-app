@@ -22,15 +22,20 @@
       }
     },
     "production-ios": {
+      "distribution": "store",
+      "autoIncrement": true,
       "ios": {
         "resourceClass": "m-medium"
-      }
+      },
+      "credentialsSource": "remote"
     },
     "production-android": {
+      "distribution": "store",
+      "autoIncrement": true,
       "android": {
-        "buildType": "app-bundle",
-        "gradleCommand": ":app:bundleRelease"
-      }
+        "buildType": "apk"
+      },
+      "credentialsSource": "remote"
     }
   },
   "submit": {

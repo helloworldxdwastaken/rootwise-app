@@ -16,9 +16,9 @@
       "bundleIdentifier": "com.rootwise.app",
       "infoPlist": {
         "NSHealthShareUsageDescription": "Rootwise needs access to your health data to provide personalized wellness insights.",
-        "NSHealthUpdateUsageDescription": "Rootwise would like to save your wellness data to Apple Health."
-      },
-      "buildNumber": "1"
+        "NSHealthUpdateUsageDescription": "Rootwise would like to save your wellness data to Apple Health.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -26,7 +26,6 @@
         "backgroundColor": "#fdf8f3"
       },
       "package": "com.rootwise.app",
-      "versionCode": 1,
       "permissions": [
         "ACTIVITY_RECOGNITION",
         "android.permission.health.READ_STEPS",
