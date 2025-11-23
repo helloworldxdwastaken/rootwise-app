@@ -34,30 +34,38 @@ jobs:
 
       - name: Build Android APK (Debug - Unsigned)
         run: |
+          set -o pipefail
           cd android
-          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee build.log
-          echo "Build completed"
-      
-      - name: Upload build log if failed
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-build-log
-          path: android/build.log
-          retention-days: 7
+          ./gradlew assembleDebug --no-daemon --stacktrace --info --warning-mode all 2>&1 | tee ../android-build.log
 
-      - name: List APK files
+      - name: List build outputs
+        if: success()
         run: |
-          echo "Finding APK files..."
-          find android/app/build/outputs -name "*.apk" -type f
+          echo "Contents of android/app/build/outputs:"
+          if [ -d android/app/build/outputs ]; then
+            find android/app/build/outputs -maxdepth 4 -type f -print
+          else
+            echo "No build outputs directory found."
+          fi
 
       - name: Upload Android APK
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: rootwise-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: |
+            android/app/build/outputs/apk/**/*.apk
+            android/app/build/outputs/bundle/**/*.aab
           retention-days: 30
+      
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-build-log
+          path: android-build.log
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Build Complete
         run: echo "Debug APK ready for download"
