@@ -35,7 +35,16 @@ jobs:
       - name: Build Android APK (Debug - Unsigned)
         run: |
           cd android
-          ./gradlew assembleDebug --no-daemon --stacktrace --info
+          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee build.log
+          echo "Build completed"
+      
+      - name: Upload build log if failed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-build-log
+          path: android/build.log
+          retention-days: 7
 
       - name: List APK files
         run: |
