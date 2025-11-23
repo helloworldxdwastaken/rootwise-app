@@ -32,17 +32,17 @@ jobs:
       - name: Prebuild Android native project
         run: npx expo prebuild --platform android --clean
 
-      - name: Build Android APK (Unsigned)
+      - name: Build Android APK (Debug - Unsigned)
         run: |
           cd android
-          ./gradlew assembleRelease --no-daemon --stacktrace
+          ./gradlew assembleDebug --no-daemon --stacktrace --info
 
       - name: Upload Android APK
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: android-unsigned-apk
-          path: android/app/build/outputs/apk/release/*.apk
+          name: android-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
           retention-days: 30
 
       - name: Build Complete

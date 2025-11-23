@@ -25,14 +25,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#fdf8f3"
       },
-      "package": "com.rootwise.app",
-      "permissions": [
-        "ACTIVITY_RECOGNITION",
-        "android.permission.health.READ_STEPS",
-        "android.permission.health.READ_SLEEP",
-        "android.permission.health.READ_HEIGHT",
-        "android.permission.health.READ_WEIGHT"
-      ]
+      "package": "com.rootwise.app"
     },
     "web": {
       "favicon": "./assets/favicon.png",

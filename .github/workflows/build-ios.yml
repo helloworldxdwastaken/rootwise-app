@@ -48,22 +48,17 @@ jobs:
             -allowProvisioningUpdates \
             2>&1 | tee build.log | grep -E "error:|warning:|note:|===|Compiling|Linking|Building"
 
-      - name: Export IPA (Unsigned)
+      - name: Package app for sideloading
         run: |
-          cd ios
-          xcodebuild -exportArchive \
-            -archivePath $PWD/build/rootwise.xcarchive \
-            -exportPath $PWD/build \
-            -exportOptionsPlist ../export-options-unsigned.plist \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO
+          cd ios/build/rootwise.xcarchive/Products/Applications
+          zip -r ../../../../Rootwise.app.zip Rootwise.app
 
-      - name: Upload iOS IPA
+      - name: Upload iOS app
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: ios-unsigned-ipa
-          path: ios/build/*.ipa
+          name: ios-unsigned-app
+          path: ios/Rootwise.app.zip
           retention-days: 30
 
       - name: Build Complete
