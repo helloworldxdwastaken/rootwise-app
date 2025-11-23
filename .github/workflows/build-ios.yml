@@ -35,8 +35,8 @@ jobs:
         run: |
           cd ios
           set -o pipefail
-          xcodebuild -workspace rootwiseapp.xcworkspace \
-            -scheme rootwiseapp \
+          xcodebuild -workspace Rootwise.xcworkspace \
+            -scheme Rootwise \
             -configuration Release \
             -sdk iphoneos \
             -destination 'generic/platform=iOS' \
