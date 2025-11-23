@@ -22,9 +22,7 @@
     },
     "production-ios": {
       "ios": {
-        "resourceClass": "m-medium",
-        "buildType": "release",
-        "bundleIdentifier": "com.rootwise.app"
+        "resourceClass": "m-medium"
       }
     },
     "production-android": {
