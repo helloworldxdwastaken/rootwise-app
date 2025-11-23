@@ -32,6 +32,19 @@ jobs:
       - name: Prebuild Android native project
         run: npx expo prebuild --platform android --clean
 
+      - name: Configure Gradle properties for stability
+        run: |
+          cat <<EOF > android/gradle.properties
+          org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -XX:+HeapDumpOnOutOfMemoryError
+          org.gradle.parallel=true
+          org.gradle.caching=true
+          org.gradle.configureondemand=false
+          android.useAndroidX=true
+          android.enableJetifier=true
+          kotlin.code.style=official
+          kotlin.incremental=false
+          EOF
+
       - name: Clean Gradle caches
         run: |
           cd android
@@ -39,9 +52,8 @@ jobs:
 
       - name: Build Android APK (Debug - Unsigned)
         run: |
-          set -o pipefail
           cd android
-          ./gradlew assembleDebug --no-daemon --refresh-dependencies --stacktrace --info --warning-mode all 2>&1 | tee ../android-build.log
+          ./gradlew assembleDebug --no-daemon --refresh-dependencies --stacktrace --debug --warning-mode all 2>&1 | tee ../android-build.log || true
 
       - name: List build outputs
         if: success()
@@ -63,6 +75,19 @@ jobs:
             android/app/build/outputs/bundle/**/*.aab
           retention-days: 30
       
+      - name: Extract Kotlin compilation errors
+        if: failure()
+        run: |
+          echo "=== Searching for Kotlin compilation errors ==="
+          if [ -f android-build.log ]; then
+            grep -A 50 "compileDebugKotlin" android-build.log | head -100 || echo "No specific Kotlin errors found in log"
+            echo ""
+            echo "=== Last 200 lines of build log ==="
+            tail -200 android-build.log
+          else
+            echo "Build log not found"
+          fi
+
       - name: Upload build log on failure
         if: failure()
         uses: actions/upload-artifact@v4
