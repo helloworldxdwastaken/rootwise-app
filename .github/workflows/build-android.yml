@@ -39,7 +39,7 @@ jobs:
 
       - name: List APK files
         run: |
-          echo "📦 Finding APK files..."
+          echo "Finding APK files..."
           find android/app/build/outputs -name "*.apk" -type f
 
       - name: Upload Android APK
@@ -51,5 +51,4 @@ jobs:
           retention-days: 30
 
       - name: Build Complete
-        run: echo "✅ Debug APK ready for download: app-debug.apk"
-
+        run: echo "Debug APK ready for download"
