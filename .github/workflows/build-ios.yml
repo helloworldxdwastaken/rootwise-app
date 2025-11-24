@@ -26,11 +26,13 @@ jobs:
       - name: Prebuild iOS native project
         run: npx expo prebuild --platform ios --clean
 
-      - name: Clean CocoaPods cache
+      - name: Clean CocoaPods and build caches
         run: |
           cd ios
+          # Clean all CocoaPods caches
           pod cache clean --all || true
           rm -rf ~/Library/Caches/CocoaPods || true
+          rm -rf ~/Library/Developer/Xcode/DerivedData/* || true
           rm -rf Pods || true
           rm -rf build || true
           rm -rf Podfile.lock || true
@@ -49,7 +51,11 @@ jobs:
           REANIMATED_VERSION=$(node -p "require('../node_modules/react-native-reanimated/package.json').version")
           echo "Building with Reanimated version: $REANIMATED_VERSION"
           
+          # Clean all build artifacts and caches before building
           xcodebuild clean -workspace Rootwise.xcworkspace -scheme Rootwise || true
+          rm -rf build/DerivedData || true
+          rm -rf ~/Library/Developer/Xcode/DerivedData/ModuleCache.noindex || true
+          
           xcodebuild -workspace Rootwise.xcworkspace \
             -scheme Rootwise \
             -configuration Release \
