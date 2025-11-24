@@ -94,7 +94,10 @@ jobs:
       - name: Build Android APK (Release - Unsigned)
         run: |
           cd android
-          ./gradlew assembleRelease --no-daemon --refresh-dependencies --stacktrace --warning-mode all 2>&1 | tee ../android-build.log || true
+          ./gradlew assembleRelease --no-daemon --refresh-dependencies --stacktrace --warning-mode all 2>&1 | tee ../android-build.log
+          BUILD_EXIT_CODE=${PIPESTATUS[0]}
+          echo "Build exit code: $BUILD_EXIT_CODE"
+          exit $BUILD_EXIT_CODE
 
       - name: List build outputs
         if: success()
@@ -112,19 +115,24 @@ jobs:
         with:
           name: rootwise-release-apk
           path: |
-            android/app/build/outputs/apk/**/*.apk
-            android/app/build/outputs/bundle/**/*.aab
+            android/app/build/outputs/apk/release/*.apk
+            android/app/build/outputs/bundle/release/*.aab
           retention-days: 30
       
-      - name: Extract Kotlin compilation errors
+      - name: Extract build errors
         if: failure()
         run: |
-          echo "=== Searching for Kotlin compilation errors ==="
+          echo "=== BUILD FAILED ==="
           if [ -f android-build.log ]; then
-            grep -A 50 "compileDebugKotlin" android-build.log | head -100 || echo "No specific Kotlin errors found in log"
             echo ""
-            echo "=== Last 200 lines of build log ==="
-            tail -200 android-build.log
+            echo "=== Searching for errors ==="
+            grep -i "error" android-build.log | head -50 || echo "No 'error' keyword found"
+            echo ""
+            echo "=== Searching for FAILED tasks ==="
+            grep "FAILED" android-build.log || echo "No FAILED tasks found"
+            echo ""
+            echo "=== Last 300 lines of build log ==="
+            tail -300 android-build.log
           else
             echo "Build log not found"
           fi
