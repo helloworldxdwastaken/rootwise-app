@@ -1,10 +1,10 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Change this to your deployed backend URL
+// Backend URL - Update this for production
 const API_BASE_URL = __DEV__ 
-  ? 'http://localhost:3000/api'  // Development
-  : 'https://your-rootwise-domain.vercel.app/api';  // Production
+  ? 'http://localhost:3000/api'  // Development (local testing)
+  : 'https://rootwise.vercel.app/api';  // Production
 
 // Create axios instance
 const api = axios.create({
