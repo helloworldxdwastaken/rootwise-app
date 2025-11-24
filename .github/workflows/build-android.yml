@@ -1,4 +1,4 @@
-name: Build Android (Unsigned - Testing)
+name: Build Android (Release - Unsigned)
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   build-android:
-    name: Build Android APK (Unsigned)
+    name: Build Android APK (Release - Unsigned)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -91,10 +91,10 @@ jobs:
           cd android
           ./gradlew clean --no-daemon
 
-      - name: Build Android APK (Debug - Unsigned)
+      - name: Build Android APK (Release - Unsigned)
         run: |
           cd android
-          ./gradlew assembleDebug --no-daemon --refresh-dependencies --stacktrace --debug --warning-mode all 2>&1 | tee ../android-build.log || true
+          ./gradlew assembleRelease --no-daemon --refresh-dependencies --stacktrace --warning-mode all 2>&1 | tee ../android-build.log || true
 
       - name: List build outputs
         if: success()
@@ -110,7 +110,7 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: rootwise-debug-apk
+          name: rootwise-release-apk
           path: |
             android/app/build/outputs/apk/**/*.apk
             android/app/build/outputs/bundle/**/*.aab
@@ -139,4 +139,4 @@ jobs:
           retention-days: 7
 
       - name: Build Complete
-        run: echo "Debug APK ready for download"
+        run: echo "Release APK ready for download"
