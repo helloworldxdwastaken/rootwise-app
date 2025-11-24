@@ -33,16 +33,22 @@ jobs:
           rm -rf ~/Library/Caches/CocoaPods || true
           rm -rf Pods || true
           rm -rf build || true
+          rm -rf Podfile.lock || true
 
       - name: Install CocoaPods dependencies
         run: |
           cd ios
-          pod install --repo-update
+          pod install --repo-update --verbose
 
       - name: Build iOS app (Unsigned)
         run: |
           cd ios
           set -o pipefail
+          
+          # Get Reanimated version for preprocessor define
+          REANIMATED_VERSION=$(node -p "require('../node_modules/react-native-reanimated/package.json').version")
+          echo "Building with Reanimated version: $REANIMATED_VERSION"
+          
           xcodebuild clean -workspace Rootwise.xcworkspace -scheme Rootwise || true
           xcodebuild -workspace Rootwise.xcworkspace \
             -scheme Rootwise \
@@ -55,7 +61,7 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
-            OTHER_CFLAGS="-Wno-nullability-completeness" \
+            OTHER_CFLAGS="-Wno-nullability-completeness -DREANIMATED_VERSION_STRING=\\\"$REANIMATED_VERSION\\\"" \
             -allowProvisioningUpdates \
             2>&1 | tee ../ios-build.log
 
