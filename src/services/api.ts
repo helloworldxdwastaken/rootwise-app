@@ -15,7 +15,7 @@ const api = axios.create({
   },
 });
 
-// Add auth token to requests
+// Add JWT token to requests
 api.interceptors.request.use(async (config) => {
   const token = await AsyncStorage.getItem('session_token');
   if (token) {
@@ -29,9 +29,9 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
-      // Clear token and redirect to login
+      // Clear session and trigger logout
       await AsyncStorage.removeItem('session_token');
-      // Trigger logout event
+      await AsyncStorage.removeItem('user_data');
     }
     return Promise.reject(error);
   }
@@ -46,16 +46,40 @@ export const authAPI = {
   },
 
   login: async (email: string, password: string) => {
-    const response = await api.post('/auth/callback/credentials', { email, password });
-    if (response.data.token) {
-      await AsyncStorage.setItem('session_token', response.data.token);
+    try {
+      console.log('Logging in via mobile endpoint...');
+      
+      // Use the mobile-specific login endpoint (returns JWT token)
+      const response = await api.post('/auth/mobile-login', { 
+        email: email.toLowerCase().trim(), 
+        password 
+      });
+
+      console.log('Login successful');
+
+      // Store the JWT token
+      if (response.data.token) {
+        await AsyncStorage.setItem('session_token', response.data.token);
+      }
+      
+      return {
+        user: response.data.user,
+        success: true,
+      };
+    } catch (error: any) {
+      console.error('Login error:', error.response?.data || error.message);
+      throw new Error(error.response?.data?.error || 'Invalid email or password');
     }
-    return response.data;
   },
 
   logout: async () => {
     await AsyncStorage.removeItem('session_token');
-    await api.post('/auth/signout');
+    await AsyncStorage.removeItem('user_data');
+    try {
+      await api.post('/auth/signout');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   },
 };
 

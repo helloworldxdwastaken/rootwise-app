@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import { colors, spacing, borderRadius } from '../constants/theme';
 
@@ -70,7 +71,7 @@ export default function RegisterScreen({ navigation }: any) {
             {/* Logo */}
             <View style={styles.logoContainer}>
               <View style={styles.logoCircle}>
-                <Text style={styles.logoLeaf}>🌿</Text>
+                <Ionicons name="leaf" size={32} color={colors.primary} />
               </View>
               <Text style={styles.logoText}>Rootwise</Text>
             </View>
@@ -236,9 +237,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.md,
-  },
-  logoLeaf: {
-    fontSize: 32,
   },
   logoText: {
     fontSize: 24,
