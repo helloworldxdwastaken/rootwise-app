@@ -10,7 +10,6 @@ import {
   Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import LottieView from 'lottie-react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { healthAPI } from '../services/api';
 import { colors, spacing, borderRadius } from '../constants/theme';
