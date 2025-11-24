@@ -1,4 +1,4 @@
-name: Build iOS (Unsigned - Testing)
+name: Build iOS (Release - Unsigned)
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   build-ios:
-    name: Build iOS IPA (Unsigned)
+    name: Build iOS IPA (Release - Unsigned)
     runs-on: macos-latest
     steps:
       - name: Checkout code

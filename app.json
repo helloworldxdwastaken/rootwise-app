@@ -32,14 +32,10 @@
       "bundler": "metro"
     },
     "plugins": [
-      "expo-router",
       "expo-asset"
     ],
     "scheme": "rootwise",
     "extra": {
-      "router": {
-        "origin": false
-      },
       "eas": {
         "projectId": "c914e4b3-10d3-47c0-a035-6d41af161d23"
       }
