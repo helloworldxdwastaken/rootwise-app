@@ -127,7 +127,7 @@ export default function SettingsScreen({ navigation }: any) {
         
         // Show what was synced to database
         if (result.syncedItems && result.syncedItems.length > 0) {
-          Alert.alert(
+      Alert.alert(
             '✅ Synced to Database',
             `The following data was saved:\n\n${result.syncedItems.join('\n')}`,
             [{ text: 'Great!' }]
@@ -156,7 +156,7 @@ export default function SettingsScreen({ navigation }: any) {
           text: 'Disconnect',
           style: 'destructive',
           onPress: () => {
-            setSyncStatus('disconnected');
+      setSyncStatus('disconnected');
             setLastSyncedData(null);
             setLastSyncTime(null);
           },
@@ -256,16 +256,16 @@ export default function SettingsScreen({ navigation }: any) {
         </View>
 
         {/* Patient Profile */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons
-              name="fitness-outline"
-              size={24}
-              color={colors.primary}
-              style={styles.sectionIcon}
-            />
-            <Text style={styles.sectionTitle}>Health Profile</Text>
-          </View>
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons
+                name="fitness-outline"
+                size={24}
+                color={colors.primary}
+                style={styles.sectionIcon}
+              />
+              <Text style={styles.sectionTitle}>Health Profile</Text>
+            </View>
           {hasProfileData ? (
             <View style={styles.card}>
               <View style={styles.profileGrid}>
@@ -305,8 +305,8 @@ export default function SettingsScreen({ navigation }: any) {
               <Text style={styles.emptyProfileText}>
                 Connect your health app to sync profile data
               </Text>
-            </View>
-          )}
+          </View>
+        )}
         </View>
 
         {/* Health Device Integration */}
@@ -343,7 +343,7 @@ export default function SettingsScreen({ navigation }: any) {
               </View>
               
               {syncStatus === 'disconnected' && (
-                <TouchableOpacity
+              <TouchableOpacity
                   style={styles.connectButton}
                   onPress={handleConnectHealth}
                   disabled={!healthAvailable}
@@ -368,13 +368,13 @@ export default function SettingsScreen({ navigation }: any) {
                 >
                   {syncStatus === 'syncing' ? (
                     <ActivityIndicator size="small" color="#059669" />
-                  ) : (
-                    <View style={styles.syncButtonContent}>
+                ) : (
+                  <View style={styles.syncButtonContent}>
                       <Ionicons name="checkmark-circle" size={16} color="#059669" />
                       <Text style={styles.syncButtonTextActive}>Connected</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
+                  </View>
+                )}
+              </TouchableOpacity>
               )}
 
               {syncStatus === 'error' && (
@@ -424,9 +424,9 @@ export default function SettingsScreen({ navigation }: any) {
                       <View style={styles.syncedDataItem}>
                         <Ionicons name="scale-outline" size={14} color={colors.textSecondary} />
                         <Text style={styles.syncedDataText}>{lastSyncedData.weight} kg</Text>
-                      </View>
-                    )}
-                  </View>
+              </View>
+            )}
+          </View>
                 )}
 
                 {/* Action Buttons */}
@@ -976,4 +976,6 @@ const styles = StyleSheet.create({
   bottomSpacer: {
     height: 48,
   },
+});
+
 });

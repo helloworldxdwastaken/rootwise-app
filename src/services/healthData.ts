@@ -107,7 +107,7 @@ export const initializeHealthKit = async (): Promise<HealthPermissionStatus> => 
  */
 export const isHealthKitAvailable = async (): Promise<boolean> => {
   if (Platform.OS !== 'ios') return false;
-  
+
   const HealthKit = getHealthKit();
   if (!HealthKit) return false;
 
@@ -261,7 +261,7 @@ export const getBiologicalData = async (): Promise<{
   weight: number | null;
 } | null> => {
   if (Platform.OS !== 'ios') return null;
-  
+
   const HealthKit = getHealthKit();
   if (!HealthKit) return null;
 
@@ -363,7 +363,7 @@ export const getHealthKitData = async (): Promise<HealthDataType | null> => {
     return Object.keys(data).length > 0 ? data : null;
   } catch (error) {
     console.error('Error getting HealthKit data:', error);
-    return null;
+  return null;
   }
 };
 
@@ -458,7 +458,7 @@ export const isHealthConnectAvailable = async (): Promise<boolean> => {
     const status = await HC.getSdkStatus();
     return status === HC.SdkAvailabilityStatus.SDK_AVAILABLE;
   } catch {
-    return false;
+  return false;
   }
 };
 
@@ -663,7 +663,7 @@ export const getHealthConnectData = async (): Promise<HealthDataType | null> => 
     return Object.keys(data).length > 0 ? data : null;
   } catch (error) {
     console.error('Error getting Health Connect data:', error);
-    return null;
+  return null;
   }
 };
 
@@ -806,25 +806,25 @@ export const updateProfileFromHealthData = async (healthData: HealthDataType): P
       heightCm?: number;
       weightKg?: number;
     } = {};
-
-    if (healthData.biologicalSex) {
-      profileUpdate.sex = healthData.biologicalSex === 'male' ? 'MALE' :
-                         healthData.biologicalSex === 'female' ? 'FEMALE' : 'OTHER';
-    }
-    if (healthData.dateOfBirth) {
+      
+      if (healthData.biologicalSex) {
+        profileUpdate.sex = healthData.biologicalSex === 'male' ? 'MALE' : 
+                           healthData.biologicalSex === 'female' ? 'FEMALE' : 'OTHER';
+      }
+      if (healthData.dateOfBirth) {
       profileUpdate.dateOfBirth = healthData.dateOfBirth.toISOString().split('T')[0];
-    }
-    if (healthData.height) {
-      profileUpdate.heightCm = healthData.height;
-    }
-    if (healthData.weight) {
-      profileUpdate.weightKg = healthData.weight;
-    }
+      }
+      if (healthData.height) {
+        profileUpdate.heightCm = healthData.height;
+      }
+      if (healthData.weight) {
+        profileUpdate.weightKg = healthData.weight;
+      }
 
     return Object.keys(profileUpdate).length > 0 ? profileUpdate : null;
   } catch (error) {
     console.error('Failed to update profile from health data:', error);
-    return null;
+  return null;
   }
 };
 

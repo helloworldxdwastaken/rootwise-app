@@ -322,13 +322,13 @@ export default function ChatScreen({ navigation }: any) {
         {!isUser && (
           <LinearGradient colors={['#34d399', '#059669']} style={styles.avatar}>
             <Ionicons name="sparkles" size={12} color="#fff" />
-          </LinearGradient>
+            </LinearGradient>
         )}
         <View style={[styles.bubble, isUser ? styles.bubbleUser : styles.bubbleAI]}>
           {isUser ? (
             <Text style={[styles.bubbleText, styles.bubbleTextUser]}>
-              {item.content}
-            </Text>
+            {item.content}
+          </Text>
           ) : (
             <SimpleMarkdown>{item.content}</SimpleMarkdown>
           )}
@@ -363,21 +363,21 @@ export default function ChatScreen({ navigation }: any) {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Header */}
-      <View style={styles.header}>
+        {/* Header */}
+        <View style={styles.header}>
         <TouchableOpacity 
           onPress={() => navigation.goBack()} 
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Ionicons name="arrow-back" size={24} color={colors.primary} />
-        </TouchableOpacity>
+            <Ionicons name="arrow-back" size={24} color={colors.primary} />
+          </TouchableOpacity>
         <LinearGradient colors={['#34d399', '#059669']} style={styles.headerIcon}>
           <Ionicons name="sparkles" size={14} color="#fff" />
         </LinearGradient>
         <View style={styles.headerTextWrap}>
-          <Text style={styles.headerTitle}>Wellness Assistant</Text>
+            <Text style={styles.headerTitle}>Wellness Assistant</Text>
           <Text style={styles.headerSubtitle}>Ask about your health data</Text>
-        </View>
+          </View>
         {messages.length > 1 && (
           <TouchableOpacity 
             onPress={clearChat}
@@ -387,7 +387,7 @@ export default function ChatScreen({ navigation }: any) {
             <Ionicons name="trash-outline" size={20} color="#94a3b8" />
           </TouchableOpacity>
         )}
-      </View>
+        </View>
 
       <KeyboardAvoidingView 
         style={styles.keyboardView}
@@ -446,7 +446,7 @@ export default function ChatScreen({ navigation }: any) {
             <Ionicons name="send" size={18} color="#fff" />
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
+    </KeyboardAvoidingView>
     </View>
   );
 }
