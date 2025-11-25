@@ -8,9 +8,6 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
-      },
-      "env": {
-        "EXPO_USE_NEW_ARCH": "1"
       }
     },
     "preview-ios": {
@@ -19,20 +16,14 @@
         "simulator": false,
         "resourceClass": "m-medium"
       },
-      "credentialsSource": "remote",
-      "env": {
-        "EXPO_USE_NEW_ARCH": "1"
-      }
+      "credentialsSource": "remote"
     },
     "preview-android": {
       "distribution": "internal",
       "android": {
         "buildType": "apk"
       },
-      "credentialsSource": "remote",
-      "env": {
-        "EXPO_USE_NEW_ARCH": "1"
-      }
+      "credentialsSource": "remote"
     },
     "production-ios": {
       "distribution": "store",
@@ -40,10 +31,7 @@
       "ios": {
         "resourceClass": "m-medium"
       },
-      "credentialsSource": "remote",
-      "env": {
-        "EXPO_USE_NEW_ARCH": "1"
-      }
+      "credentialsSource": "remote"
     },
     "production-android": {
       "distribution": "store",
@@ -51,10 +39,7 @@
       "android": {
         "buildType": "apk"
       },
-      "credentialsSource": "remote",
-      "env": {
-        "EXPO_USE_NEW_ARCH": "1"
-      }
+      "credentialsSource": "remote"
     }
   },
   "submit": {

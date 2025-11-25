@@ -26,8 +26,11 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Install dependencies
-        run: npm install --legacy-peer-deps --force
+      - name: Clean and install dependencies
+        run: |
+          rm -rf node_modules
+          rm -f package-lock.json
+          npm install --legacy-peer-deps
 
       - name: Prebuild Android native project
         run: npx expo prebuild --platform android --clean
@@ -80,7 +83,7 @@ jobs:
           # React Native / Expo
           react.enableHermes=true
           hermesEnabled=true
-          newArchEnabled=true
+          newArchEnabled=false
           
           # Flipper (disabled for release builds)
           FLIPPER_VERSION=0.182.0
