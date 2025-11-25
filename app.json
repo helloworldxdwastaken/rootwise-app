@@ -66,6 +66,17 @@
             "android.permission.health.WRITE_WEIGHT"
           ]
         }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "newArchEnabled": true
+          },
+          "ios": {
+            "newArchEnabled": true
+          }
+        }
       ]
     ],
     "scheme": "rootwise",
