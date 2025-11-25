@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,12 +12,16 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { colors } from '../constants/theme';
 import api from '../services/api';
+
+const { width } = Dimensions.get('window');
 
 interface FoodAnalysis {
   description: string;
@@ -54,9 +58,51 @@ export default function FoodScannerScreen() {
   const [manualCarbs, setManualCarbs] = useState('');
   const [manualFat, setManualFat] = useState('');
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const floatAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.95)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  // Entry animation
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        tension: 50,
+        friction: 7,
+        useNativeDriver: true,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  // Floating animation for hero icon
+  useEffect(() => {
+    if (!image) {
+      const float = Animated.loop(
+        Animated.sequence([
+          Animated.timing(floatAnim, {
+            toValue: -8,
+            duration: 2000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(floatAnim, {
+            toValue: 0,
+            duration: 2000,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      float.start();
+      return () => float.stop();
+    }
+  }, [image]);
 
   // Pulse animation for analyze button
-  React.useEffect(() => {
+  useEffect(() => {
     if (image && !analysis) {
       const pulse = Animated.loop(
         Animated.sequence([
@@ -274,44 +320,131 @@ export default function FoodScannerScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>Food Scanner</Text>
-          <Text style={styles.subtitle}>
-            Take a photo of your meal to estimate calories
-          </Text>
-        </View>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Premium Initial Screen */}
+        {!image ? (
+          <Animated.View style={[styles.heroContainer, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
+            {/* Hero Section */}
+            <View style={styles.heroSection}>
+              <Animated.View style={[styles.heroIconContainer, { transform: [{ translateY: floatAnim }] }]}>
+                <LinearGradient
+                  colors={['#FF6B6B', '#FF8E53', '#FFA726']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.heroIconGradient}
+                >
+                  <Ionicons name="restaurant" size={56} color="#fff" />
+                </LinearGradient>
+                <View style={styles.sparkle1}>
+                  <Ionicons name="sparkles" size={20} color="#FFD700" />
+                </View>
+                <View style={styles.sparkle2}>
+                  <Ionicons name="sparkles" size={16} color="#FF6B6B" />
+                </View>
+              </Animated.View>
+              
+              <Text style={styles.heroTitle}>AI Food Scanner</Text>
+              <Text style={styles.heroSubtitle}>
+                Snap a photo and let AI analyze your meal's nutrition instantly
+              </Text>
 
-        {/* Image Preview or Camera Buttons */}
-        {image ? (
-          <View style={styles.previewContainer}>
-            <Image source={{ uri: image }} style={styles.preview} />
-            <TouchableOpacity style={styles.clearButton} onPress={reset}>
-              <Ionicons name="close-circle" size={32} color="#fff" />
-            </TouchableOpacity>
-          </View>
+              {/* Feature Pills */}
+              <View style={styles.featurePills}>
+                <View style={styles.featurePill}>
+                  <Ionicons name="flash" size={14} color="#FF6B6B" />
+                  <Text style={styles.featurePillText}>Instant</Text>
+                </View>
+                <View style={styles.featurePill}>
+                  <Ionicons name="analytics" size={14} color="#4CAF50" />
+                  <Text style={styles.featurePillText}>Accurate</Text>
+                </View>
+                <View style={styles.featurePill}>
+                  <Ionicons name="leaf" size={14} color="#2196F3" />
+                  <Text style={styles.featurePillText}>Smart</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Action Cards */}
+            <View style={styles.actionCardsContainer}>
+              {/* Camera Card - Primary */}
+              <TouchableOpacity
+                style={styles.primaryActionCard}
+                onPress={() => pickImage(true)}
+                activeOpacity={0.9}
+              >
+                <LinearGradient
+                  colors={[colors.primary, '#6B4BDB']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.primaryCardGradient}
+                >
+                  <View style={styles.primaryCardContent}>
+                    <View style={styles.primaryIconWrapper}>
+                      <Ionicons name="camera" size={32} color="#fff" />
+                    </View>
+                    <View style={styles.primaryCardText}>
+                      <Text style={styles.primaryCardTitle}>Take Photo</Text>
+                      <Text style={styles.primaryCardSubtitle}>Use camera to scan food</Text>
+                    </View>
+                    <Ionicons name="arrow-forward-circle" size={28} color="rgba(255,255,255,0.8)" />
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+
+              {/* Gallery Card - Secondary */}
+              <TouchableOpacity
+                style={styles.secondaryActionCard}
+                onPress={() => pickImage(false)}
+                activeOpacity={0.9}
+              >
+                <View style={styles.secondaryCardContent}>
+                  <View style={styles.secondaryIconWrapper}>
+                    <Ionicons name="images" size={28} color={colors.primary} />
+                  </View>
+                  <View style={styles.secondaryCardText}>
+                    <Text style={styles.secondaryCardTitle}>Choose from Gallery</Text>
+                    <Text style={styles.secondaryCardSubtitle}>Select existing photo</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={24} color={colors.textLight} />
+                </View>
+              </TouchableOpacity>
+
+              {/* Manual Entry Option */}
+              <TouchableOpacity
+                style={styles.manualEntryCard}
+                onPress={() => setShowManualInput(true)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="create-outline" size={20} color={colors.textLight} />
+                <Text style={styles.manualEntryText}>Or enter manually</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Bottom Info */}
+            <View style={styles.bottomInfo}>
+              <Ionicons name="shield-checkmark" size={16} color={colors.success} />
+              <Text style={styles.bottomInfoText}>Your photos are analyzed securely and never stored</Text>
+            </View>
+          </Animated.View>
         ) : (
-          <View style={styles.cameraButtons}>
-            <TouchableOpacity
-              style={styles.cameraButton}
-              onPress={() => pickImage(true)}
-            >
-              <View style={styles.cameraIconWrapper}>
-                <Ionicons name="camera" size={48} color={colors.primary} />
-              </View>
-              <Text style={styles.cameraButtonText}>Take Photo</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.cameraButton}
-              onPress={() => pickImage(false)}
-            >
-              <View style={styles.cameraIconWrapper}>
-                <Ionicons name="images" size={48} color={colors.primary} />
-              </View>
-              <Text style={styles.cameraButtonText}>Choose Photo</Text>
-            </TouchableOpacity>
-          </View>
+          <>
+            {/* Header when image is selected */}
+            <View style={styles.header}>
+              <Text style={styles.title}>Food Scanner</Text>
+              <Text style={styles.subtitle}>
+                Analyzing your meal
+              </Text>
+            </View>
+
+            {/* Image Preview */}
+            <View style={styles.previewContainer}>
+              <Image source={{ uri: image }} style={styles.preview} />
+              <TouchableOpacity style={styles.clearButton} onPress={reset}>
+                <Ionicons name="close-circle" size={32} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          </>
         )}
 
         {/* Meal Type Selector */}
@@ -597,7 +730,187 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 20,
     paddingBottom: 100,
+    flexGrow: 1,
   },
+  // Premium Hero Styles
+  heroContainer: {
+    flex: 1,
+    minHeight: 600,
+  },
+  heroSection: {
+    alignItems: 'center',
+    paddingTop: 20,
+    paddingBottom: 32,
+  },
+  heroIconContainer: {
+    position: 'relative',
+    marginBottom: 24,
+  },
+  heroIconGradient: {
+    width: 120,
+    height: 120,
+    borderRadius: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#FF6B6B',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+    elevation: 15,
+  },
+  sparkle1: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+  },
+  sparkle2: {
+    position: 'absolute',
+    bottom: 8,
+    left: -12,
+  },
+  heroTitle: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: colors.text,
+    marginBottom: 12,
+    letterSpacing: -0.5,
+  },
+  heroSubtitle: {
+    fontSize: 16,
+    color: colors.textLight,
+    textAlign: 'center',
+    lineHeight: 24,
+    paddingHorizontal: 20,
+    marginBottom: 20,
+  },
+  featurePills: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  featurePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#fff',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  featurePillText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  actionCardsContainer: {
+    gap: 12,
+    marginBottom: 24,
+  },
+  primaryActionCard: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  primaryCardGradient: {
+    padding: 20,
+  },
+  primaryCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  primaryIconWrapper: {
+    width: 60,
+    height: 60,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  primaryCardText: {
+    flex: 1,
+  },
+  primaryCardTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#fff',
+    marginBottom: 4,
+  },
+  primaryCardSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.8)',
+  },
+  secondaryActionCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  secondaryCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 18,
+  },
+  secondaryIconWrapper: {
+    width: 50,
+    height: 50,
+    borderRadius: 14,
+    backgroundColor: `${colors.primary}12`,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  secondaryCardText: {
+    flex: 1,
+  },
+  secondaryCardTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 2,
+  },
+  secondaryCardSubtitle: {
+    fontSize: 13,
+    color: colors.textLight,
+  },
+  manualEntryCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 16,
+    marginTop: 4,
+  },
+  manualEntryText: {
+    fontSize: 15,
+    color: colors.textLight,
+    fontWeight: '500',
+  },
+  bottomInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  bottomInfoText: {
+    fontSize: 12,
+    color: colors.textLight,
+  },
+  // Original styles (kept for when image is selected)
   header: {
     marginBottom: 24,
   },
@@ -610,35 +923,6 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     color: colors.textLight,
-  },
-  cameraButtons: {
-    flexDirection: 'row',
-    gap: 16,
-    marginBottom: 24,
-  },
-  cameraButton: {
-    flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 24,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: colors.glassBorder,
-    borderStyle: 'dashed',
-  },
-  cameraIconWrapper: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: `${colors.primary}15`,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  cameraButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
   },
   previewContainer: {
     position: 'relative',
