@@ -14,7 +14,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.rootwise.app",
-      "newArchEnabled": true,
+      "newArchEnabled": false,
       "infoPlist": {
         "NSHealthShareUsageDescription": "Rootwise needs access to your health data to provide personalized wellness insights based on your sleep, activity, and vital signs.",
         "NSHealthUpdateUsageDescription": "Rootwise would like to save your wellness data to Apple Health to keep your health records in sync.",
@@ -35,7 +35,7 @@
         "backgroundColor": "#fdf8f3"
       },
       "package": "com.rootwise.app",
-      "newArchEnabled": true,
+      "newArchEnabled": false,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
@@ -82,10 +82,10 @@
         "expo-build-properties",
         {
           "android": {
-            "newArchEnabled": true
+            "newArchEnabled": false
           },
           "ios": {
-            "newArchEnabled": true
+            "newArchEnabled": false
           }
         }
       ]
