@@ -1,8 +1,12 @@
 import React from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { AuthProvider } from './src/contexts/AuthContext';
 import AppNavigator from './src/navigation/AppNavigator';
+import * as Notifications from 'expo-notifications';
+import { requestNotificationPermissions } from './src/services/notifications';
 
 // Error Boundary to catch crashes
 class ErrorBoundary extends React.Component<
@@ -26,7 +30,10 @@ class ErrorBoundary extends React.Component<
     if (this.state.hasError) {
       return (
         <View style={styles.errorContainer}>
-          <Text style={styles.errorTitle}>⚠️ App Crashed</Text>
+          <View style={styles.errorHeader}>
+            <Ionicons name="warning-outline" size={24} color="#e74c3c" />
+            <Text style={styles.errorTitle}>App Crashed</Text>
+          </View>
           <Text style={styles.errorSubtitle}>Don't worry, here's what happened:</Text>
           <ScrollView style={styles.errorScroll}>
             <Text style={styles.errorText}>
@@ -51,15 +58,34 @@ class ErrorBoundary extends React.Component<
 export default function App() {
   // Log startup
   React.useEffect(() => {
-    console.log('✅ App started successfully');
-    console.log('📱 Environment:', __DEV__ ? 'Development' : 'Production');
+    console.log('App started successfully');
+    console.log('Environment:', __DEV__ ? 'Development' : 'Production');
+  }, []);
+
+  // Ask for push notification permission on entry
+  React.useEffect(() => {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: false,
+        shouldSetBadge: false,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }),
+    });
+
+    requestNotificationPermissions();
   }, []);
 
   return (
     <ErrorBoundary>
       <AuthProvider>
-        <StatusBar style="dark" />
-        <AppNavigator />
+        <SafeAreaProvider>
+          <View style={styles.appWrapper}>
+            <StatusBar style="dark" />
+            <AppNavigator />
+          </View>
+        </SafeAreaProvider>
       </AuthProvider>
     </ErrorBoundary>
   );
@@ -71,6 +97,17 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: '#fff',
     justifyContent: 'center',
+  },
+  appWrapper: {
+    flex: 1,
+    paddingTop: 15,
+    backgroundColor: '#fdf8f3',
+  },
+  errorHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
   errorTitle: {
     fontSize: 24,

@@ -580,7 +580,32 @@ enum SessionMode {
 
 ## 4. **Authentication**
 
-### NextAuth Configuration
+### **Dual Authentication System** 🆕
+
+Rootwise supports **two authentication methods** without conflicts:
+
+1. **Web Authentication (NextAuth + Cookies)**
+   - Used by: Web app (rootwise.vercel.app)
+   - Method: Session cookies
+   - Endpoints: `/api/auth/[...nextauth]`
+   - Storage: HTTP-only cookies
+
+2. **Mobile Authentication (JWT Tokens)** 🆕
+   - Used by: React Native mobile app
+   - Method: JWT Bearer tokens
+   - Endpoints: `/api/auth/mobile-login`
+   - Storage: AsyncStorage + Authorization header
+
+**How it works:**
+- `getCurrentUser()` checks **both** NextAuth session AND JWT token
+- Web requests → NextAuth verifies cookie → Returns user
+- Mobile requests → JWT verified from `Authorization: Bearer` header → Returns user
+- All API routes work with **both** authentication methods
+- Zero breaking changes to existing web authentication
+
+---
+
+### NextAuth Configuration (Web Only)
 
 **File:** `lib/auth.ts`
 
@@ -805,9 +830,65 @@ export async function GET() {
 
 ---
 
+#### `POST /api/auth/mobile-login` 🆕
+
+**Purpose:** Mobile app authentication (returns JWT token)
+
+**Why separate endpoint?**
+- Web uses NextAuth with cookies
+- Mobile apps (React Native) need JWT tokens
+- Both methods supported without breaking existing web auth
+
+**Body:**
+```json
+{
+  "email": "user@example.com",
+  "password": "securepassword123"
+}
+```
+
+**Process:**
+1. Validate email & password
+2. Find user (case-insensitive)
+3. Verify password with bcrypt
+4. Generate JWT token (30-day expiry)
+5. Return token + user data
+
+**Response:**
+```json
+{
+  "success": true,
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": "clx...",
+    "email": "user@example.com",
+    "name": "Jane Doe",
+    "onboardingCompleted": false
+  }
+}
+```
+
+**Mobile app usage:**
+```typescript
+// Store token
+await AsyncStorage.setItem('session_token', response.token);
+
+// Add to requests
+headers: {
+  'Authorization': `Bearer ${token}`
+}
+```
+
+**Errors:**
+- 400: Missing email or password
+- 401: Invalid credentials
+- 500: Server error
+
+---
+
 #### `ALL /api/auth/[...nextauth]`
 
-**Purpose:** NextAuth handler (login, logout, session check)
+**Purpose:** NextAuth handler (login, logout, session check) - **Web only**
 
 **Handled by NextAuth:**
 - Login: `POST /api/auth/callback/credentials`
@@ -816,6 +897,8 @@ export async function GET() {
 - CSRF: `GET /api/auth/csrf`
 
 **No manual implementation needed** - NextAuth handles everything.
+
+**Note:** Mobile apps should use `/api/auth/mobile-login` instead.
 
 ---
 
@@ -3396,9 +3479,9 @@ fetch('/api/me/conditions/USER_A_CONDITION_ID', {
 ## 📊 **System Statistics**
 
 **Codebase:**
-- Total Routes: 32 (18 API + 14 pages)
-- Components: 26 React components (19 core + 7 dashboard) 🆕
-- API Endpoints: 18 routes (organized by domain)
+- Total Routes: 33 (19 API + 14 pages)
+- Components: 26 React components (19 core + 7 dashboard)
+- API Endpoints: 19 routes (organized by domain)
 - Database Models: 9 models (User, UserProfile, PatientProfile, Condition, ChatSession, ChatMessage, UserMemory, HealthJournal, Account, Session)
 - Lines of Code: ~15,500+
 - Type Coverage: 100% TypeScript
@@ -3406,13 +3489,13 @@ fetch('/api/me/conditions/USER_A_CONDITION_ID', {
 
 **API Surface:**
 ```
-Authentication:  2 routes  (register, nextauth)
+Authentication:  3 routes  (register, mobile-login 🆕, nextauth)
 Profile:         3 routes  (me/profile, profile legacy, health-intake)
 Conditions:      2 routes  (conditions, conditions/[id])
 Chat:            5 routes  (session, session/[id], message, quick, ai-response)
 Memory:          2 routes  (memory, memory/[id])
-Health:          3 routes  🆕 (today, weekly, analyze-symptoms)
-Onboarding:      1 route   🆕 (onboarding/chat)
+Health:          3 routes  (today, weekly, analyze-symptoms)
+Onboarding:      1 route   (onboarding/chat)
 ```
 
 **Features:**

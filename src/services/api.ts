@@ -1,10 +1,14 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 
-// Backend URL - Update this for production
-const API_BASE_URL = __DEV__ 
-  ? 'http://localhost:3000/api'  // Development (local testing)
-  : 'https://rootwise.vercel.app/api';  // Production
+// Backend URL: default to production, allow override via Expo config/env
+const ENV_API_BASE =
+  Constants.expoConfig?.extra?.apiBaseUrl ||
+  // eslint-disable-next-line no-undef
+  (typeof process !== 'undefined' ? (process as any).env?.EXPO_PUBLIC_API_BASE_URL : undefined);
+
+const API_BASE_URL = ENV_API_BASE || 'https://rootwise.vercel.app/api';
 
 // Create axios instance
 const api = axios.create({
@@ -178,4 +182,3 @@ export const memoryAPI = {
 };
 
 export default api;
-

@@ -9,9 +9,9 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import { colors, spacing, borderRadius } from '../constants/theme';
 
@@ -58,16 +58,17 @@ export default function LoginScreen({ navigation }: any) {
           <View style={styles.content}>
             {/* Logo */}
             <View style={styles.logoContainer}>
-              <View style={styles.logoCircle}>
-                <Ionicons name="leaf" size={32} color={colors.primary} />
-              </View>
-              <Text style={styles.logoText}>Rootwise</Text>
+              <Image
+                source={require('../../assets/icon.png')}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
             </View>
 
             {/* Welcome text */}
             <View style={styles.headerContainer}>
-              <Text style={styles.title}>Welcome back</Text>
-              <Text style={styles.subtitle}>
+              <Text style={[styles.title, styles.centerText]}>Welcome back</Text>
+              <Text style={[styles.subtitle, styles.centerText]}>
                 Sign in to continue your wellness journey
               </Text>
             </View>
@@ -92,7 +93,7 @@ export default function LoginScreen({ navigation }: any) {
                 <Text style={styles.label}>Password</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="••••••••"
+                  placeholder="********"
                   placeholderTextColor={colors.textLight}
                   value={password}
                   onChangeText={setPassword}
@@ -190,19 +191,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.xl,
   },
-  logoCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
-    backgroundColor: colors.glass,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.md,
+  logoImage: {
+    width: 96,
+    height: 96,
   },
-  logoText: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: colors.primary,
+  centerText: {
+    textAlign: 'center',
   },
   headerContainer: {
     marginBottom: spacing.xl,
@@ -302,4 +296,3 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 });
-

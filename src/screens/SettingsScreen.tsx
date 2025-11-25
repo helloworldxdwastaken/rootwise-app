@@ -7,23 +7,42 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  Platform,
+  Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import { profileAPI, conditionsAPI } from '../services/api';
+import {
+  initializeHealthData,
+  isHealthDataAvailable,
+  syncHealthData,
+  getHealthPlatformName,
+  HealthDataType,
+} from '../services/healthData';
 import { colors, spacing, borderRadius } from '../constants/theme';
+
+type SyncStatus = 'disconnected' | 'connecting' | 'connected' | 'syncing' | 'error';
 
 export default function SettingsScreen({ navigation }: any) {
   const { user, logout } = useAuth();
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<any>(null);
   const [patientProfile, setPatientProfile] = useState<any>(null);
   const [conditions, setConditions] = useState<any[]>([]);
-  const [healthSyncEnabled, setHealthSyncEnabled] = useState(false);
-  const [syncStatus, setSyncStatus] = useState<'connected' | 'disconnected' | 'syncing'>('disconnected');
+  
+  // Health sync state
+  const [healthAvailable, setHealthAvailable] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>('disconnected');
+  const [lastSyncedData, setLastSyncedData] = useState<HealthDataType | null>(null);
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
 
   useEffect(() => {
     loadData();
+    checkHealthAvailability();
   }, []);
 
   const loadData = async () => {
@@ -47,23 +66,114 @@ export default function SettingsScreen({ navigation }: any) {
     }
   };
 
-  const handleHealthSyncToggle = async () => {
+  const checkHealthAvailability = async () => {
+    const available = await isHealthDataAvailable();
+    setHealthAvailable(available);
+  };
+
+  const handleConnectHealth = async () => {
+    try {
+      setSyncStatus('connecting');
+
+      // Initialize and request permissions
+      const result = await initializeHealthData();
+
+      if (result.authorized) {
+        setSyncStatus('connected');
+        Alert.alert(
+          'Connected!',
+          `${getHealthPlatformName()} is now connected. Your health data will sync automatically.`,
+          [{ text: 'Sync Now', onPress: handleSyncHealth }]
+        );
+      } else if (result.shouldRequest) {
+        setSyncStatus('disconnected');
+        Alert.alert(
+          'Permission Required',
+          `Please allow ${getHealthPlatformName()} access in your device settings to sync health data.`,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: openHealthSettings },
+          ]
+        );
+      } else {
+        setSyncStatus('error');
+        Alert.alert(
+          'Not Available',
+          `${getHealthPlatformName()} is not available on this device. ${result.deniedPermissions.join(', ')}`,
+        );
+      }
+    } catch (error: any) {
+      console.error('Health connect error:', error);
+      setSyncStatus('error');
+      Alert.alert('Connection Failed', error.message || 'Could not connect to health data');
+    }
+  };
+
+  const handleSyncHealth = async () => {
+    if (syncStatus !== 'connected') {
+      await handleConnectHealth();
+      return;
+    }
+
     try {
       setSyncStatus('syncing');
-      // TODO: Implement actual health sync API call
-      // For now, just toggle the state
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setHealthSyncEnabled(!healthSyncEnabled);
-      setSyncStatus(healthSyncEnabled ? 'disconnected' : 'connected');
-      
-      Alert.alert(
-        'Success',
-        healthSyncEnabled ? 'Health sync disabled' : 'Health sync enabled'
-      );
-    } catch (error) {
-      console.error('Failed to toggle health sync:', error);
-      setSyncStatus('disconnected');
-      Alert.alert('Error', 'Failed to toggle health sync');
+
+      const result = await syncHealthData();
+
+      if (result.success && result.data) {
+        setLastSyncedData(result.data);
+        setLastSyncTime(new Date());
+        setSyncStatus('connected');
+        
+        // Show what was synced to database
+        if (result.syncedItems && result.syncedItems.length > 0) {
+          Alert.alert(
+            '✅ Synced to Database',
+            `The following data was saved:\n\n${result.syncedItems.join('\n')}`,
+            [{ text: 'Great!' }]
+          );
+        } else {
+          Alert.alert('Sync Complete', 'No new data found to sync');
+        }
+      } else {
+        setSyncStatus('connected');
+        Alert.alert('Sync Issue', result.error || 'No data available to sync');
+      }
+    } catch (error: any) {
+      console.error('Sync error:', error);
+      setSyncStatus('error');
+      Alert.alert('Sync Failed', error.message || 'Could not sync health data');
+    }
+  };
+
+  const handleDisconnectHealth = () => {
+    Alert.alert(
+      'Disconnect Health Data?',
+      `This will stop syncing from ${getHealthPlatformName()}. Your existing data will be preserved.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Disconnect',
+          style: 'destructive',
+          onPress: () => {
+            setSyncStatus('disconnected');
+            setLastSyncedData(null);
+            setLastSyncTime(null);
+          },
+        },
+      ]
+    );
+  };
+
+  const openHealthSettings = () => {
+    if (Platform.OS === 'ios') {
+      // Open iOS Health app settings
+      const { Linking } = require('react-native');
+      Linking.openURL('x-apple-health://');
+    } else {
+      // Open Android Health Connect settings
+      const { Linking } = require('react-native');
+      Linking.openSettings();
     }
   };
 
@@ -78,6 +188,19 @@ export default function SettingsScreen({ navigation }: any) {
     );
   };
 
+  const formatLastSync = (date: Date | null) => {
+    if (!date) return null;
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const minutes = Math.floor(diff / 60000);
+    
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes} min ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    return date.toLocaleDateString();
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -86,9 +209,22 @@ export default function SettingsScreen({ navigation }: any) {
     );
   }
 
+  const platformName = getHealthPlatformName();
+  const isIOS = Platform.OS === 'ios';
+
+  const hasProfileData = patientProfile && (
+    patientProfile.dateOfBirth || 
+    patientProfile.sex || 
+    patientProfile.heightCm || 
+    patientProfile.weightKg
+  );
+
   return (
-    <LinearGradient colors={[colors.background, '#ffffff']} style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Settings</Text>
@@ -98,7 +234,12 @@ export default function SettingsScreen({ navigation }: any) {
         {/* Account Information */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionIcon}>👤</Text>
+            <Ionicons
+              name="person-circle-outline"
+              size={24}
+              color={colors.primary}
+              style={styles.sectionIcon}
+            />
             <Text style={styles.sectionTitle}>Account Information</Text>
           </View>
           <View style={styles.card}>
@@ -115,12 +256,17 @@ export default function SettingsScreen({ navigation }: any) {
         </View>
 
         {/* Patient Profile */}
-        {patientProfile && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionIcon}>💚</Text>
-              <Text style={styles.sectionTitle}>Health Profile</Text>
-            </View>
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Ionicons
+              name="fitness-outline"
+              size={24}
+              color={colors.primary}
+              style={styles.sectionIcon}
+            />
+            <Text style={styles.sectionTitle}>Health Profile</Text>
+          </View>
+          {hasProfileData ? (
             <View style={styles.card}>
               <View style={styles.profileGrid}>
                 {patientProfile.dateOfBirth && (
@@ -153,82 +299,162 @@ export default function SettingsScreen({ navigation }: any) {
                 )}
               </View>
             </View>
-          </View>
-        )}
+          ) : (
+            <View style={styles.emptyProfileCard}>
+              <Ionicons name="body-outline" size={32} color={colors.textLight} />
+              <Text style={styles.emptyProfileText}>
+                Connect your health app to sync profile data
+              </Text>
+            </View>
+          )}
+        </View>
 
         {/* Health Device Integration */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionIcon}>⌚</Text>
+            <Ionicons
+              name="watch-outline"
+              size={24}
+              color={colors.primary}
+              style={styles.sectionIcon}
+            />
             <Text style={styles.sectionTitle}>Health Device Integration</Text>
           </View>
           <Text style={styles.sectionDescription}>
-            Connect your Apple Health or Google Fit to track metrics automatically
+            Connect {platformName} to automatically sync your health data
           </Text>
 
-          {/* Apple Health */}
+          {/* Primary Health Platform (iOS or Android) */}
           <View style={styles.card}>
             <View style={styles.deviceRow}>
               <View style={styles.deviceInfo}>
-                <View style={styles.deviceIconContainer}>
-                  <Text style={styles.deviceIcon}>❤️</Text>
-                </View>
-                <View>
-                  <Text style={styles.deviceName}>Apple Health</Text>
-                  <Text style={styles.devicePlatform}>iOS devices</Text>
+                <Image
+                  source={
+                    isIOS
+                      ? require('../../assets/health_apps/Health_icon_iOS_12.png')
+                      : require('../../assets/health_apps/Google_fitng.png')
+                  }
+                  style={styles.healthAppIcon}
+                />
+                <View style={styles.deviceTextWrap}>
+                  <Text style={styles.deviceName}>{platformName}</Text>
+                  <Text style={styles.devicePlatform}>Steps, Sleep, Heart Rate, Weight</Text>
                 </View>
               </View>
-              <TouchableOpacity
-                style={[
-                  styles.syncButton,
-                  syncStatus === 'connected' && styles.syncButtonActive
-                ]}
-                onPress={handleHealthSyncToggle}
-                disabled={syncStatus === 'syncing'}
-              >
-                {syncStatus === 'syncing' ? (
-                  <ActivityIndicator size="small" color={colors.primary} />
-                ) : (
-                  <Text style={[
-                    styles.syncButtonText,
-                    syncStatus === 'connected' && styles.syncButtonTextActive
-                  ]}>
-                    {syncStatus === 'connected' ? '✓ Connected' : 'Connect'}
+              
+              {syncStatus === 'disconnected' && (
+                <TouchableOpacity
+                  style={styles.connectButton}
+                  onPress={handleConnectHealth}
+                  disabled={!healthAvailable}
+                >
+                  <Text style={[styles.connectButtonText, !healthAvailable && { opacity: 0.5 }]}>
+                    {healthAvailable ? 'Connect' : 'Not Available'}
                   </Text>
-                )}
-              </TouchableOpacity>
+                </TouchableOpacity>
+              )}
+
+              {syncStatus === 'connecting' && (
+                <View style={styles.syncButton}>
+                  <ActivityIndicator size="small" color={colors.primary} />
+                </View>
+              )}
+
+              {(syncStatus === 'connected' || syncStatus === 'syncing') && (
+                <TouchableOpacity
+                  style={[styles.syncButton, styles.syncButtonActive]}
+                  onPress={handleSyncHealth}
+                  disabled={syncStatus === 'syncing'}
+                >
+                  {syncStatus === 'syncing' ? (
+                    <ActivityIndicator size="small" color="#059669" />
+                  ) : (
+                    <View style={styles.syncButtonContent}>
+                      <Ionicons name="checkmark-circle" size={16} color="#059669" />
+                      <Text style={styles.syncButtonTextActive}>Connected</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              )}
+
+              {syncStatus === 'error' && (
+                <TouchableOpacity
+                  style={[styles.syncButton, styles.errorButton]}
+                  onPress={handleConnectHealth}
+                >
+                  <Ionicons name="alert-circle" size={16} color="#dc2626" />
+                  <Text style={styles.errorButtonText}>Retry</Text>
+                </TouchableOpacity>
+              )}
             </View>
+
+            {/* Connected Status Info */}
             {syncStatus === 'connected' && (
               <View style={styles.syncInfo}>
-                <Text style={styles.syncInfoText}>
-                  ✓ Syncing: Steps, Heart Rate, Sleep, Activity
-                </Text>
+                <View style={styles.syncInfoRow}>
+                  <Ionicons name="sync" size={16} color="#059669" />
+                  <Text style={styles.syncInfoText}>
+                    Auto-syncing enabled
+                    {lastSyncTime && ` • Last sync: ${formatLastSync(lastSyncTime)}`}
+                  </Text>
+                </View>
+
+                {/* Synced Data Summary */}
+                {lastSyncedData && (
+                  <View style={styles.syncedDataGrid}>
+                    {lastSyncedData.steps !== undefined && (
+                      <View style={styles.syncedDataItem}>
+                        <Ionicons name="footsteps-outline" size={14} color={colors.textSecondary} />
+                        <Text style={styles.syncedDataText}>{lastSyncedData.steps.toLocaleString()} steps</Text>
+                      </View>
+                    )}
+                    {lastSyncedData.sleepHours !== undefined && (
+                      <View style={styles.syncedDataItem}>
+                        <Ionicons name="moon-outline" size={14} color={colors.textSecondary} />
+                        <Text style={styles.syncedDataText}>{lastSyncedData.sleepHours} hrs sleep</Text>
+                      </View>
+                    )}
+                    {lastSyncedData.heartRate !== undefined && (
+                      <View style={styles.syncedDataItem}>
+                        <Ionicons name="heart-outline" size={14} color={colors.textSecondary} />
+                        <Text style={styles.syncedDataText}>{lastSyncedData.heartRate} bpm</Text>
+                      </View>
+                    )}
+                    {lastSyncedData.weight !== undefined && (
+                      <View style={styles.syncedDataItem}>
+                        <Ionicons name="scale-outline" size={14} color={colors.textSecondary} />
+                        <Text style={styles.syncedDataText}>{lastSyncedData.weight} kg</Text>
+                      </View>
+                    )}
+                  </View>
+                )}
+
+                {/* Action Buttons */}
+                <View style={styles.syncActions}>
+                  <TouchableOpacity
+                    style={styles.syncActionButton}
+                    onPress={handleSyncHealth}
+                    disabled={syncStatus as string === 'syncing'}
+                  >
+                    <Ionicons name="refresh" size={16} color={colors.primary} />
+                    <Text style={styles.syncActionText}>Sync Now</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.syncActionButton, styles.disconnectButton]}
+                    onPress={handleDisconnectHealth}
+                  >
+                    <Ionicons name="unlink" size={16} color="#dc2626" />
+                    <Text style={[styles.syncActionText, { color: '#dc2626' }]}>Disconnect</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             )}
           </View>
 
-          {/* Google Fit */}
-          <View style={styles.card}>
-            <View style={styles.deviceRow}>
-              <View style={styles.deviceInfo}>
-                <View style={[styles.deviceIconContainer, { backgroundColor: '#E3F2FD' }]}>
-                  <Text style={styles.deviceIcon}>📱</Text>
-                </View>
-                <View>
-                  <Text style={styles.deviceName}>Google Fit</Text>
-                  <Text style={styles.devicePlatform}>Android devices</Text>
-                </View>
-              </View>
-              <View style={[styles.syncButton, styles.comingSoonButton]}>
-                <Text style={styles.comingSoonText}>Coming Soon</Text>
-              </View>
-            </View>
-          </View>
-
           {/* Privacy Note */}
           <View style={styles.privacyNote}>
-            <Text style={styles.privacyIcon}>🔒</Text>
-            <View style={{ flex: 1 }}>
+            <Ionicons name="lock-closed-outline" size={18} color="#1E40AF" style={styles.privacyIcon} />
+            <View style={styles.privacyTextWrap}>
               <Text style={styles.privacyTitle}>Privacy Note</Text>
               <Text style={styles.privacyText}>
                 Your health data is encrypted and never shared without your permission.
@@ -240,7 +466,12 @@ export default function SettingsScreen({ navigation }: any) {
         {/* Clinic History */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionIcon}>📋</Text>
+            <Ionicons
+              name="clipboard-outline"
+              size={24}
+              color={colors.primary}
+              style={styles.sectionIcon}
+            />
             <Text style={styles.sectionTitle}>Clinic History</Text>
             <View style={styles.badge}>
               <Text style={styles.badgeText}>View Only</Text>
@@ -249,7 +480,7 @@ export default function SettingsScreen({ navigation }: any) {
 
           {conditions.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyIcon}>📅</Text>
+              <Ionicons name="calendar-clear-outline" size={48} color={colors.textLight} />
               <Text style={styles.emptyTitle}>No clinic history recorded yet</Text>
               <Text style={styles.emptyText}>
                 Your healthcare provider can add records to your account
@@ -282,14 +513,28 @@ export default function SettingsScreen({ navigation }: any) {
 
                   <View style={styles.conditionDetails}>
                     {condition.diagnosedAt && (
-                      <Text style={styles.conditionDetail}>
-                        📅 {new Date(condition.diagnosedAt).toLocaleDateString()}
-                      </Text>
+                      <View style={styles.conditionDetailRow}>
+                        <Ionicons
+                          name="calendar-outline"
+                          size={14}
+                          color={colors.textSecondary}
+                        />
+                        <Text style={styles.conditionDetail}>
+                          {new Date(condition.diagnosedAt).toLocaleDateString()}
+                        </Text>
+                      </View>
                     )}
                     {condition.diagnosedBy && (
-                      <Text style={styles.conditionDetail}>
-                        📍 {condition.diagnosedBy}
-                      </Text>
+                      <View style={styles.conditionDetailRow}>
+                        <Ionicons
+                          name="location-outline"
+                          size={14}
+                          color={colors.textSecondary}
+                        />
+                        <Text style={styles.conditionDetail}>
+                          {condition.diagnosedBy}
+                        </Text>
+                      </View>
                     )}
                   </View>
 
@@ -302,7 +547,7 @@ export default function SettingsScreen({ navigation }: any) {
           )}
 
           <View style={styles.warningNote}>
-            <Text style={styles.warningIcon}>⚠️</Text>
+            <Ionicons name="warning-outline" size={18} color="#92400E" style={styles.warningIcon} />
             <Text style={styles.warningText}>
               This information is provided by your healthcare provider and cannot be edited directly.
             </Text>
@@ -314,27 +559,30 @@ export default function SettingsScreen({ navigation }: any) {
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
 
-        <View style={{ height: spacing.xxl }} />
+        <View style={styles.bottomSpacer} />
       </ScrollView>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#fff',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#fff',
   },
   scrollContent: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.xl,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 100,
   },
   header: {
-    marginBottom: spacing.xl,
+    marginBottom: 24,
   },
   title: {
     fontSize: 32,
@@ -355,7 +603,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   sectionIcon: {
-    fontSize: 24,
     marginRight: spacing.sm,
   },
   sectionTitle: {
@@ -430,6 +677,21 @@ const styles = StyleSheet.create({
     color: colors.text,
     textTransform: 'capitalize',
   },
+  emptyProfileCard: {
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    borderStyle: 'dashed',
+  },
+  emptyProfileText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
   deviceRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -440,17 +702,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
   },
-  deviceIconContainer: {
+  healthAppIcon: {
     width: 40,
     height: 40,
-    borderRadius: borderRadius.md,
-    backgroundColor: '#FEE2E2',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: 10,
     marginRight: spacing.sm,
   },
-  deviceIcon: {
-    fontSize: 20,
+  deviceTextWrap: {
+    flex: 1,
   },
   deviceName: {
     fontSize: 16,
@@ -461,6 +720,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textSecondary,
   },
+  connectButton: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.primary,
+  },
+  connectButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
   syncButton: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
@@ -468,38 +738,93 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: colors.glassBorder,
+    minWidth: 100,
+    alignItems: 'center',
+  },
+  syncButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   syncButtonActive: {
     backgroundColor: '#D1FAE5',
     borderColor: '#6EE7B7',
   },
-  syncButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.primary,
-  },
   syncButtonTextActive: {
     color: '#059669',
+    fontWeight: '600',
+    fontSize: 14,
   },
-  comingSoonButton: {
-    backgroundColor: colors.background,
+  errorButton: {
+    backgroundColor: '#FEE2E2',
+    borderColor: '#FCA5A5',
+    flexDirection: 'row',
+    gap: spacing.xs,
   },
-  comingSoonText: {
+  errorButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.textLight,
+    color: '#dc2626',
   },
   syncInfo: {
     marginTop: spacing.md,
     backgroundColor: '#D1FAE5',
-    padding: spacing.sm,
+    padding: spacing.md,
     borderRadius: borderRadius.md,
     borderWidth: 1,
     borderColor: '#6EE7B7',
+    gap: spacing.sm,
+  },
+  syncInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   syncInfoText: {
     fontSize: 12,
     color: '#059669',
+    flex: 1,
+  },
+  syncedDataGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  syncedDataItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: borderRadius.md,
+  },
+  syncedDataText: {
+    fontSize: 12,
+    color: colors.text,
+  },
+  syncActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  syncActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(255,255,255,0.8)',
+    borderRadius: borderRadius.md,
+  },
+  syncActionText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  disconnectButton: {
+    backgroundColor: 'rgba(254,226,226,0.8)',
   },
   privacyNote: {
     flexDirection: 'row',
@@ -510,8 +835,11 @@ const styles = StyleSheet.create({
     borderColor: '#93C5FD',
   },
   privacyIcon: {
-    fontSize: 16,
     marginRight: spacing.sm,
+    marginTop: 2,
+  },
+  privacyTextWrap: {
+    flex: 1,
   },
   privacyTitle: {
     fontSize: 14,
@@ -531,10 +859,6 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     borderWidth: 1,
     borderColor: colors.glassBorder,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: spacing.md,
   },
   emptyTitle: {
     fontSize: 16,
@@ -601,6 +925,11 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginBottom: spacing.sm,
   },
+  conditionDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
   conditionDetail: {
     fontSize: 12,
     color: colors.textSecondary,
@@ -623,7 +952,6 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   warningIcon: {
-    fontSize: 16,
     marginRight: spacing.sm,
   },
   warningText: {
@@ -645,5 +973,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#DC2626',
   },
+  bottomSpacer: {
+    height: 48,
+  },
 });
-
