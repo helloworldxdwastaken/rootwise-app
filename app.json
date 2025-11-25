@@ -18,6 +18,8 @@
       "infoPlist": {
         "NSHealthShareUsageDescription": "Rootwise needs access to your health data to provide personalized wellness insights based on your sleep, activity, and vital signs.",
         "NSHealthUpdateUsageDescription": "Rootwise would like to save your wellness data to Apple Health to keep your health records in sync.",
+        "NSCameraUsageDescription": "Rootwise needs camera access to scan your food and estimate calories.",
+        "NSPhotoLibraryUsageDescription": "Rootwise needs photo library access to analyze food photos for calorie estimation.",
         "ITSAppUsesNonExemptEncryption": false
       },
       "entitlements": {
@@ -35,6 +37,8 @@
       "package": "com.rootwise.app",
       "newArchEnabled": true,
       "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.health.READ_STEPS",
         "android.permission.health.READ_SLEEP",
         "android.permission.health.READ_HEART_RATE",
@@ -52,6 +56,13 @@
     "plugins": [
       "expo-asset",
       "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Rootwise needs access to your photos to analyze food images.",
+          "cameraPermission": "Rootwise needs camera access to scan food and estimate calories."
+        }
+      ],
       [
         "react-native-health-connect",
         {

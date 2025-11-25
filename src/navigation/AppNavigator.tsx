@@ -14,6 +14,7 @@ import RegisterScreen from '../screens/RegisterScreen';
 import OverviewScreen from '../screens/OverviewScreen';
 import ChatScreen from '../screens/ChatScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import FoodScannerScreen from '../screens/FoodScannerScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -22,6 +23,7 @@ const Tab = createBottomTabNavigator();
 function TabIcon({ name, focused, color }: { name: string; focused: boolean; color: string }) {
   const icons: { [key: string]: { focused: string; default: string } } = {
     Home: { focused: 'home', default: 'home-outline' },
+    Food: { focused: 'scan', default: 'scan-outline' },
     Chat: { focused: 'chatbubbles', default: 'chatbubbles-outline' },
     Settings: { focused: 'settings', default: 'settings-outline' },
   };
@@ -68,6 +70,7 @@ function MainTabs() {
       })}
     >
       <Tab.Screen name="Home" component={OverviewScreen} />
+      <Tab.Screen name="Food" component={FoodScannerScreen} />
       <Tab.Screen name="Chat" component={ChatScreen} />
       <Tab.Screen name="Settings" component={SettingsScreen} />
     </Tab.Navigator>
