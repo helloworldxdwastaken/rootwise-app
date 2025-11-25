@@ -80,7 +80,7 @@ jobs:
           # React Native / Expo
           react.enableHermes=true
           hermesEnabled=true
-          newArchEnabled=false
+          newArchEnabled=true
           
           # Flipper (disabled for release builds)
           FLIPPER_VERSION=0.182.0
