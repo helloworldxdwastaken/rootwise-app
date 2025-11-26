@@ -73,24 +73,45 @@ const HEALTHKIT_PERMISSIONS = {
 /**
  * Initialize Apple HealthKit and request permissions
  */
-export const initializeHealthKit = async (): Promise<HealthPermissionStatus> => {
+export const initializeHealthKit = async (): Promise<HealthPermissionStatus & { expoGo?: boolean }> => {
   if (Platform.OS !== 'ios') {
     return { authorized: false, shouldRequest: false, deniedPermissions: [] };
   }
 
   const HealthKit = getHealthKit();
   if (!HealthKit) {
-    return { authorized: false, shouldRequest: false, deniedPermissions: ['HealthKit not available'] };
+    // HealthKit module not available - likely running in Expo Go
+    console.log('HealthKit module not loaded - this requires a development build, not Expo Go');
+    return { 
+      authorized: false, 
+      shouldRequest: false, 
+      deniedPermissions: ['HealthKit requires a development build. Expo Go does not support HealthKit.'],
+      expoGo: true
+    };
+  }
+
+  // First check if HealthKit is available on this device
+  const available = await isHealthKitAvailable();
+  if (!available) {
+    console.log('HealthKit not available on this device');
+    return { 
+      authorized: false, 
+      shouldRequest: false, 
+      deniedPermissions: ['HealthKit is not available on this device'] 
+    };
   }
 
   return new Promise((resolve) => {
+    console.log('Requesting HealthKit permissions...');
     HealthKit.initHealthKit(HEALTHKIT_PERMISSIONS, (error: string) => {
       if (error) {
         console.log('HealthKit init error:', error);
+        // Check if user denied or if there's an actual error
+        const isDenied = error.toLowerCase().includes('denied') || error.toLowerCase().includes('not determined');
         resolve({
           authorized: false,
-          shouldRequest: true,
-          deniedPermissions: [error],
+          shouldRequest: isDenied,
+          deniedPermissions: [isDenied ? 'Please allow access in Health app' : error],
         });
       } else {
         console.log('HealthKit initialized successfully');

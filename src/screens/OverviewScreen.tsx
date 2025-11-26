@@ -17,6 +17,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { healthAPI, foodAPI } from '../services/api';
 import { colors, spacing, borderRadius } from '../constants/theme';
 import { EmotionShowcase, EmotionKey } from '../components/EmotionShowcase';
+import { checkAndScheduleReminders } from '../services/notifications';
 
 type WeeklyDay = {
   dayName?: string;
@@ -80,6 +81,15 @@ export default function OverviewScreen({ navigation }: any) {
       } else if (today?.insights?.length > 0) {
         setAiInsights(today.insights);
       }
+      
+      // Check and schedule smart reminders based on current health data
+      checkAndScheduleReminders({
+        hydrationGlasses: today?.hydrationGlasses || 0,
+        sleepHours: today?.sleepHours,
+        energyScore: today?.energyScore,
+        caloriesConsumed: today?.caloriesConsumed || food?.totals?.calories || 0,
+      }).catch(err => console.log('Reminder check error:', err));
+      
     } catch (error) {
       console.error('Failed to load health data:', error);
     } finally {

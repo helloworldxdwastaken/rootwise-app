@@ -2,7 +2,7 @@
 
 **React Native Mobile Application with iOS & Android Health Integration**
 
-**Last Updated:** November 25, 2025  
+**Last Updated:** November 26, 2025  
 **Backend:** https://rootwise.vercel.app  
 **Framework:** React Native with Expo SDK 54.0.0  
 **Status:** ✅ **PRODUCTION-READY**
@@ -78,16 +78,27 @@ Rootwise Mobile is a **React Native** wellness tracking app that connects to the
 - ✅ 401 error handling with auto-logout
 
 ### 2. **Tab Navigation** ✓
-- ✅ Bottom tab navigation (Home, Chat, Settings)
+- ✅ Bottom tab navigation (Home, Food, Chat, Settings)
 - ✅ Beautiful icons with Ionicons
 - ✅ Smooth transitions
 - ✅ Auth-protected routes
+
+### 2.5 **Food Scanner Screen** ✓ ✨ NEW
+- ✅ **AI-powered food analysis** - Scan meals with camera
+- ✅ **Manual entry mode** - Input calories/macros manually
+- ✅ **Meal type selection** - Breakfast, lunch, dinner, snack
+- ✅ **Brand-consistent UI** - Green/amber color scheme
+- ✅ **Macro tracking** - Protein, carbs, fat, fiber
+- ✅ **Quick logging** - One-tap to save meals
+- ✅ **Backend sync** - All data saved to database
 
 ### 3. **Overview Page (Home)** ✓
 - ✅ Health dashboard with energy tracking (1-10 scale)
 - ✅ Sleep hours display with weekly history chart
 - ✅ Hydration counter (+1 quick button)
-- ✅ **Activity card** - Steps, heart rate, calories from health apps ✨ NEW
+- ✅ **Activity card** - Steps, heart rate, calories from health apps
+- ✅ **Food logs display** - Today's meals with calories/macros ✨ NEW
+- ✅ **Calorie deficit tracker** - BMR/TDEE calculated goal ✨ NEW
 - ✅ AI symptom analysis with confidence levels
 - ✅ Weekly patterns visualization
 - ✅ Lottie emotion animations (productive, mindful, tired)
@@ -305,23 +316,27 @@ react-native-health-connect  # Android Health Connect wrapper
 | `/api/me/profile` | PUT | Update profile (health data) | ✅ ALIGNED |
 | `/api/me/conditions` | GET | List conditions | ✅ ALIGNED |
 | `/api/me/conditions` | POST | Add condition | ✅ ALIGNED |
-| `/api/health/today` | GET | Today's health + activity | ✅ ALIGNED |
+| `/api/health/today` | GET | Today's health + activity + food | ✅ ALIGNED |
 | `/api/health/today` | POST | Log metrics (sleep, steps, HR) | ✅ ALIGNED |
 | `/api/health/weekly` | GET | Weekly data | ✅ ALIGNED |
-| `/api/health/analyze-symptoms` | POST | AI analysis | ✅ ALIGNED |
-| `/api/chat/quick` | POST | AI chat | ✅ ALIGNED |
+| `/api/health/analyze-symptoms` | POST | AI analysis (includes food) | ✅ ALIGNED |
+| `/api/food/analyze` | POST | AI food image analysis | ✅ NEW |
+| `/api/food/log` | GET | Get today's food logs | ✅ NEW |
+| `/api/food/log` | POST | Log a meal | ✅ NEW |
+| `/api/food/log` | DELETE | Delete food entry | ✅ NEW |
+| `/api/chat/quick` | POST | AI chat (food-aware) | ✅ ALIGNED |
 | `/api/chat/session` | POST | Create session | ✅ ALIGNED |
 | `/api/chat/session` | GET | List sessions | ✅ ALIGNED |
 | `/api/onboarding/chat` | POST | Onboarding | ✅ ALIGNED |
 | `/api/memory` | GET | AI memories | ✅ ALIGNED |
 
-**Total: 16 endpoints actively used**
+**Total: 20 endpoints actively used**
 
 ### Health Today Response (Updated):
 
 ```json
 {
-  "date": "2025-11-25",
+  "date": "2025-11-26",
   "energyScore": 7,
   "sleepHours": "7.5",
   "hydrationGlasses": 4,
@@ -330,7 +345,48 @@ react-native-health-connect  # Android Health Connect wrapper
   "notes": null,
   "steps": 8432,
   "heartRate": 72,
-  "activeCalories": 320
+  "activeCalories": 320,
+  "foodLogs": [
+    {
+      "id": "clx...",
+      "description": "Grilled chicken salad",
+      "calories": 450,
+      "protein": 35,
+      "carbs": 20,
+      "fat": 18,
+      "mealType": "lunch"
+    }
+  ],
+  "caloriesConsumed": 1200,
+  "proteinConsumed": 85,
+  "carbsConsumed": 120,
+  "fatConsumed": 45,
+  "calorieGoal": 2100
+}
+```
+
+### Food Log API:
+
+**POST /api/food/analyze** - Analyze food image with AI:
+```json
+{
+  "imageBase64": "data:image/jpeg;base64,...",
+  "mealType": "lunch"
+}
+```
+
+**POST /api/food/log** - Log a meal:
+```json
+{
+  "description": "Grilled chicken salad",
+  "calories": 450,
+  "protein": 35,
+  "carbs": 20,
+  "fat": 18,
+  "fiber": 5,
+  "mealType": "lunch",
+  "portionSize": "medium",
+  "confidence": 0.92
 }
 ```
 
@@ -452,7 +508,9 @@ react-native-health-connect  # Android Health Connect wrapper
 | Hero Card | Lottie animation, energy state, energy bar |
 | Sleep Card | Hours, weekly chart, quality badge |
 | Hydration Card | Glasses count, visual cups, +1 button |
-| **Activity Card** ✨ | Steps, heart rate, calories from health app |
+| **Activity Card** | Steps, heart rate, calories from health app |
+| **Today's Food** ✨ | Food logs with calories/macros summary |
+| **Calorie Goal** ✨ | Progress bar with consumed vs goal |
 | AI Insights | Analyzed symptoms with confidence |
 | Weekly Patterns | Energy trends, best/worst days |
 
@@ -464,6 +522,44 @@ react-native-health-connect  # Android Health Connect wrapper
 │     🚶            ❤️            🔥      │
 │    8,432          72           320      │
 │    Steps         BPM           Cal      │
+└─────────────────────────────────────────┘
+```
+
+**Calorie Tracker Layout:**
+```
+┌─────────────────────────────────────────┐
+│ Calorie Goal         900 kcal remaining │
+├─────────────────────────────────────────┤
+│ ████████████████░░░░░░░░░░  57%        │
+│                                         │
+│ Consumed: 1200      Goal: 2100          │
+└─────────────────────────────────────────┘
+```
+
+### Food Scanner Screen (`FoodScannerScreen.tsx`) ✨ NEW
+
+| Section | Features |
+|---------|----------|
+| Hero Icon | Restaurant icon with green/amber gradient |
+| Camera Button | Primary action to scan food with AI |
+| Manual Entry | Secondary option for manual input |
+| Meal Type Picker | Breakfast, lunch, dinner, snack |
+| Macro Inputs | Calories, protein, carbs, fat, fiber |
+| Log Button | Saves meal to database |
+
+**Manual Entry Form:**
+```
+┌─────────────────────────────────────────┐
+│ Enter Details Manually                   │
+├─────────────────────────────────────────┤
+│ Description:    [Grilled chicken      ] │
+│                                         │
+│ Meal Type:      [Lunch           ▼]     │
+│                                         │
+│ Calories:  [450]    Protein: [35g]      │
+│ Carbs:     [20g]    Fat:     [18g]      │
+│                                         │
+│           [ Log Meal ]                  │
 └─────────────────────────────────────────┘
 ```
 
@@ -527,8 +623,16 @@ Then:
 ### Production Builds (GitHub Actions):
 
 Your GitHub Actions workflows:
-- `.github/workflows/build-ios.yml` - Builds iOS IPA
+- `.github/workflows/build-ios.yml` - Builds iOS IPA (with lottie fix)
 - `.github/workflows/build-android.yml` - Builds Android APK
+
+**iOS Build Notes (Xcode 16 + lottie-react-native):**
+The iOS workflow uses `macos-15` runner and includes a Ruby script to patch `lottie-react-native` for Xcode 16 compatibility:
+- Sets `SWIFT_VERSION = 5.0`
+- Sets `CLANG_ENABLE_MODULES = YES`
+- Sets `BUILD_LIBRARY_FOR_DISTRIBUTION = NO`
+
+This patch runs automatically after `pod install` and ensures Lottie animations work correctly.
 
 **Trigger Build:**
 ```bash
@@ -585,9 +689,10 @@ rootwise app/
 │   ├── screens/
 │   │   ├── LoginScreen.tsx          # Login UI
 │   │   ├── RegisterScreen.tsx       # Registration UI
-│   │   ├── OverviewScreen.tsx       # Health dashboard + Activity ✨
-│   │   ├── ChatScreen.tsx           # AI chat (markdown, typing dots) ✨
-│   │   └── SettingsScreen.tsx       # Profile + health sync ✨
+│   │   ├── OverviewScreen.tsx       # Health dashboard + food logs ✨
+│   │   ├── FoodScannerScreen.tsx    # Food scanner + manual entry ✨ NEW
+│   │   ├── ChatScreen.tsx           # AI chat (markdown, typing dots)
+│   │   └── SettingsScreen.tsx       # Profile + health sync
 │   ├── services/
 │   │   ├── api.ts                   # Backend API client (16 endpoints)
 │   │   ├── healthData.ts            # HealthKit + Health Connect ✨
@@ -686,17 +791,21 @@ const colors = {
 |---------|--------|
 | Login & Register | ✅ Working |
 | Overview Dashboard | ✅ Working |
-| **Activity Card (Steps/HR/Cal)** | ✅ **NEW - Working** |
+| Activity Card (Steps/HR/Cal) | ✅ Working |
+| **Food Scanner Screen** | ✅ **NEW - Working** |
+| **Food Logs Display** | ✅ **NEW - Working** |
+| **Calorie Deficit Tracker** | ✅ **NEW - Working** |
 | Chat with AI | ✅ Working |
-| **Chat Markdown Support** | ✅ **NEW - Working** |
-| **Chat Quick Prompts** | ✅ **NEW - Working** |
-| **Chat Typing Dots** | ✅ **NEW - Working** |
+| **AI Knows Food Logs** | ✅ **NEW - Working** |
+| Chat Markdown Support | ✅ Working |
+| Chat Quick Prompts | ✅ Working |
+| Chat Typing Dots | ✅ Working |
 | Settings | ✅ Working |
-| **Real Health App Icons** | ✅ **NEW - Working** |
+| Real Health App Icons | ✅ Working |
 | Clinic History (Read-Only) | ✅ Working |
 | iOS HealthKit Sync | ✅ Working |
 | Android Health Connect Sync | ✅ Working |
-| **Health Data → Database** | ✅ **Updated - Working** |
+| Health Data → Database | ✅ Working |
 | Backend Connection | ✅ Working |
 | Modern UI | ✅ Working |
 
@@ -708,16 +817,39 @@ const colors = {
 > 
 > - **Full iOS HealthKit and Android Health Connect integration** that syncs health data directly to the Rootwise database
 > - **Activity tracking** with steps, heart rate, and calories displayed on the home screen
-> - **AI chat** with markdown support, quick prompts, and animated typing indicator
-> - **Clean, polished UI** matching the web app design
+> - **Food scanning & logging** with AI-powered analysis and calorie deficit tracking
+> - **AI chat** with markdown support, quick prompts, and animated typing indicator (now food-aware!)
+> - **Clean, polished UI** matching the web app design with brand-consistent colors
 > 
-> Users can connect their Apple Health or Google Health Connect accounts to automatically sync sleep, steps, heart rate, weight, height, and other metrics. The app connects to the production backend and provides a complete wellness experience.
+> Users can connect their Apple Health or Google Health Connect accounts to automatically sync sleep, steps, heart rate, weight, height, and other metrics. The app also tracks food intake with AI analysis and calculates personalized calorie goals based on BMR/TDEE.
 
 **Status:** ✅ **READY TO PUSH TO APP STORES**
 
 ---
 
-**Documentation Version:** 3.0  
-**Last Updated:** November 25, 2025  
+## 📝 Latest Updates (November 26, 2025) ✨
+
+### Food Scanner & Calorie Tracking
+- ✅ Added Food Scanner screen with AI-powered image analysis
+- ✅ Manual food entry with full macro tracking (protein, carbs, fat, fiber)
+- ✅ Today's Food card on home screen showing logged meals
+- ✅ Calorie deficit tracker with BMR/TDEE-based goal calculation
+- ✅ AI chat now knows what you ate and can give dietary advice
+
+### UI/UX Improvements
+- ✅ Food Scanner uses brand-consistent green/amber colors
+- ✅ Improved spacing in manual entry form
+- ✅ Better padding in Clinic History section on Settings screen
+- ✅ Improved Apple Health error messaging and availability checks
+
+### Build System
+- ✅ iOS build fixed for Xcode 16 with lottie-react-native patch
+- ✅ GitHub Actions uses macos-15 runner for latest Xcode support
+- ✅ Ruby xcodeproj script patches Lottie Swift settings automatically
+
+---
+
+**Documentation Version:** 4.0  
+**Last Updated:** November 26, 2025  
 **Platforms:** iOS 13+, Android 9+ (API 28+)  
 **Related:** See `COMPLETE_SYSTEM_GUIDE.md` for web backend documentation

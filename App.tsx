@@ -5,8 +5,11 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthProvider } from './src/contexts/AuthContext';
 import AppNavigator from './src/navigation/AppNavigator';
-import * as Notifications from 'expo-notifications';
-import { requestNotificationPermissions } from './src/services/notifications';
+import { 
+  requestNotificationPermissions, 
+  scheduleDailyReminders,
+  areRemindersEnabled 
+} from './src/services/notifications';
 
 // Error Boundary to catch crashes
 class ErrorBoundary extends React.Component<
@@ -62,19 +65,23 @@ export default function App() {
     console.log('Environment:', __DEV__ ? 'Development' : 'Production');
   }, []);
 
-  // Ask for push notification permission on entry
+  // Set up notifications on app start
   React.useEffect(() => {
-    Notifications.setNotificationHandler({
-      handleNotification: async () => ({
-        shouldShowAlert: true,
-        shouldPlaySound: false,
-        shouldSetBadge: false,
-        shouldShowBanner: true,
-        shouldShowList: true,
-      }),
-    });
-
-    requestNotificationPermissions();
+    const setupNotifications = async () => {
+      // Request permissions
+      const token = await requestNotificationPermissions();
+      
+      // Schedule daily reminders if enabled
+      if (token) {
+        const remindersEnabled = await areRemindersEnabled();
+        if (remindersEnabled) {
+          await scheduleDailyReminders();
+          console.log('Daily reminders scheduled');
+        }
+      }
+    };
+    
+    setupNotifications();
   }, []);
 
   return (

@@ -4,8 +4,8 @@
 
 This document explains everything built in Rootwise as if you're a new engineer joining the team.
 
-**Last Updated:** November 24, 2025  
-**Version:** 2.1  
+**Last Updated:** November 26, 2025  
+**Version:** 2.2  
 **Status:** ✅ Production-Ready
 
 **Platforms:**
@@ -3845,11 +3845,118 @@ All features tested and verified:
 
 ---
 
+## 13. **Latest Updates (November 26, 2025)** 🆕
+
+### **Food Logging & Calorie Tracking System**
+
+**New Feature:** Complete food tracking with AI-powered analysis and calorie deficit tracking.
+
+#### **New API Endpoints:**
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/food/analyze` | POST | AI-powered food image analysis |
+| `/api/food/log` | GET | Get today's food logs |
+| `/api/food/log` | POST | Log a meal with calories/macros |
+| `/api/food/log` | DELETE | Remove a food entry |
+
+#### **New Database Model:**
+
+```prisma
+model FoodLog {
+  id          String    @id @default(cuid())
+  userId      String
+  description String
+  calories    Int
+  protein     Float?
+  carbs       Float?
+  fat         Float?
+  fiber       Float?
+  mealType    String?   // breakfast, lunch, dinner, snack
+  portionSize String?
+  confidence  Float?    // AI confidence score
+  imageUrl    String?
+  eatenAt     DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, eatenAt])
+}
+```
+
+#### **Calorie Goal Calculation:**
+
+The system calculates personalized daily calorie goals using:
+1. **Mifflin-St Jeor Equation** for BMR (Basal Metabolic Rate)
+2. **Activity multiplier** (1.55 for moderate activity)
+3. **500 kcal deficit** for weight loss goal
+
+```typescript
+// For males:
+BMR = (10 × weight_kg) + (6.25 × height_cm) - (5 × age) + 5
+
+// For females:
+BMR = (10 × weight_kg) + (6.25 × height_cm) - (5 × age) - 161
+
+// TDEE = BMR × 1.55 (moderate activity)
+// Calorie Goal = TDEE - 500
+```
+
+**Calculation happens on backend** in:
+- `/api/health/today` (GET) - Returns `calorieGoal`
+- `/api/health/analyze-symptoms` (POST) - Includes in AI context
+
+#### **AI Integration:**
+
+The AI assistant now knows about food logs:
+- `/api/health/analyze-symptoms` includes `foodLogs` and `caloriesConsumed` in context
+- `/api/chat/quick` has access to food data for personalized advice
+- AI can comment on dietary habits and suggest improvements
+
+#### **Mobile App Updates:**
+
+**Food Scanner Screen (`FoodScannerScreen.tsx`):**
+- AI-powered food scanning with camera
+- Manual entry with calories/macro inputs
+- Brand-consistent green/amber color scheme
+- Improved form spacing
+
+**Overview Screen (`OverviewScreen.tsx`):**
+- "Today's Food" card showing logged meals
+- Calorie deficit tracker with progress bar
+- Daily macro summary (protein, carbs, fat)
+
+#### **UI/UX Fixes:**
+
+- ✅ Food Scanner hero icon uses brand colors (green/amber instead of orange/purple)
+- ✅ Manual entry form has proper padding between elements
+- ✅ Clinic History section has proper spacing between conditions and warning
+- ✅ Apple Health error messaging improved with "Not Available" button state
+
+### **iOS Build Fix (Xcode 16 + lottie-react-native)**
+
+**Problem:** iOS builds failing with `lottie-react-native` on Xcode 16.
+
+**Solution:** GitHub Actions workflow (`.github/workflows/build-ios.yml`) now:
+1. Uses `macos-15` runner (Xcode 16.1+)
+2. Runs Ruby script after `pod install` to patch `Pods/Pods.xcodeproj`
+3. Sets for `lottie-react-native` and `lottie-ios` targets:
+   - `SWIFT_VERSION = 5.0`
+   - `CLANG_ENABLE_MODULES = YES`
+   - `BUILD_LIBRARY_FOR_DISTRIBUTION = NO`
+
+**Result:** iOS builds complete successfully with Lottie animations working.
+
+---
+
 **Welcome to Rootwise! 🌿**
 
 This system has been thoroughly built, tested, and documented. All features are operational and the codebase is production-ready. The only pending item is the database migration, which can be run after Supabase maintenance completes.
 
 **For questions or updates:** Refer to this guide as the single source of truth.
 
-**Last Verified:** November 24, 2025  
+**Last Verified:** November 26, 2025  
 **Documentation Accuracy:** ✓✓✓ Triple-checked

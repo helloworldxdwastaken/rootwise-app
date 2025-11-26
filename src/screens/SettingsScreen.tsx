@@ -10,6 +10,7 @@ import {
   Platform,
   Image,
   Linking,
+  Switch,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,6 +24,12 @@ import {
   getHealthPlatformName,
   HealthDataType,
 } from '../services/healthData';
+import {
+  areRemindersEnabled,
+  setRemindersEnabled,
+  requestNotificationPermissions,
+  scheduleDailyReminders,
+} from '../services/notifications';
 import { colors, spacing, borderRadius } from '../constants/theme';
 
 type SyncStatus = 'disconnected' | 'connecting' | 'connected' | 'syncing' | 'error';
@@ -40,11 +47,48 @@ export default function SettingsScreen({ navigation }: any) {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('disconnected');
   const [lastSyncedData, setLastSyncedData] = useState<HealthDataType | null>(null);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+  
+  // Reminders state
+  const [remindersEnabled, setRemindersEnabledState] = useState(true);
 
   useEffect(() => {
     loadData();
     checkHealthAvailability();
+    loadReminderSettings();
   }, []);
+  
+  const loadReminderSettings = async () => {
+    const enabled = await areRemindersEnabled();
+    setRemindersEnabledState(enabled);
+  };
+  
+  const handleToggleReminders = async (value: boolean) => {
+    if (value) {
+      // Request permissions if enabling
+      const token = await requestNotificationPermissions();
+      if (token === null) {
+        Alert.alert(
+          'Permissions Required',
+          'Please enable notifications in your device settings to receive reminders.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          ]
+        );
+        return;
+      }
+    }
+    
+    setRemindersEnabledState(value);
+    await setRemindersEnabled(value);
+    
+    if (value) {
+      Alert.alert(
+        'Reminders Enabled 🔔',
+        'You\'ll receive smart reminders for:\n\n• Hydration (throughout the day)\n• Sleep logging (mornings)\n• Food tracking (meal times)'
+      );
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -77,7 +121,7 @@ export default function SettingsScreen({ navigation }: any) {
       setSyncStatus('connecting');
 
       // Initialize and request permissions
-      const result = await initializeHealthData();
+      const result = await initializeHealthData() as any;
 
       if (result.authorized) {
         setSyncStatus('connected');
@@ -86,16 +130,36 @@ export default function SettingsScreen({ navigation }: any) {
           `${getHealthPlatformName()} is now connected. Your health data will sync automatically.`,
           [{ text: 'Sync Now', onPress: handleSyncHealth }]
         );
+      } else if (result.expoGo) {
+        // Running in Expo Go - HealthKit requires development build
+        setSyncStatus('error');
+        Alert.alert(
+          'Development Build Required',
+          'Apple Health integration requires a development build. Expo Go does not support HealthKit.\n\nPlease install the app from TestFlight or build it locally with:\n\nnpx expo run:ios',
+          [{ text: 'OK' }]
+        );
       } else if (result.shouldRequest) {
         setSyncStatus('disconnected');
-        Alert.alert(
-          'Permission Required',
-          `Please allow ${getHealthPlatformName()} access in your device settings to sync health data.`,
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Open Settings', onPress: openHealthSettings },
-          ]
-        );
+        
+        if (Platform.OS === 'ios') {
+          Alert.alert(
+            'Permission Required',
+            'To connect Apple Health:\n\n1. Open the Health app\n2. Tap your profile icon (top right)\n3. Tap "Privacy"\n4. Tap "Apps"\n5. Find Rootwise and enable permissions',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Open Health App', onPress: openHealthSettings },
+            ]
+          );
+        } else {
+          Alert.alert(
+            'Permission Required',
+            `Please allow ${getHealthPlatformName()} access in your device settings to sync health data.`,
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Open Settings', onPress: openHealthSettings },
+            ]
+          );
+        }
       } else {
         setSyncStatus('error');
         const errorMsg = result.deniedPermissions.join(', ');
@@ -123,7 +187,7 @@ export default function SettingsScreen({ navigation }: any) {
         } else {
           Alert.alert(
             'Not Available',
-            `${getHealthPlatformName()} is not available on this device. ${errorMsg}`,
+            `${getHealthPlatformName()} is not available on this device.\n\n${errorMsg}`,
           );
         }
       }
@@ -479,6 +543,44 @@ export default function SettingsScreen({ navigation }: any) {
                     <Ionicons name="unlink" size={16} color="#dc2626" />
                     <Text style={[styles.syncActionText, { color: '#dc2626' }]}>Disconnect</Text>
                   </TouchableOpacity>
+                </View>
+              </View>
+            )}
+          </View>
+
+          {/* Reminders Toggle */}
+          <View style={styles.reminderSection}>
+            <View style={styles.reminderRow}>
+              <View style={styles.reminderInfo}>
+                <Ionicons name="notifications-outline" size={22} color={colors.primary} />
+                <View style={styles.reminderTextWrap}>
+                  <Text style={styles.reminderTitle}>Smart Reminders</Text>
+                  <Text style={styles.reminderSubtitle}>
+                    Hydration, sleep & food reminders
+                  </Text>
+                </View>
+              </View>
+              <Switch
+                value={remindersEnabled}
+                onValueChange={handleToggleReminders}
+                trackColor={{ false: '#e2e8f0', true: colors.primaryLight }}
+                thumbColor={remindersEnabled ? colors.primary : '#f4f3f4'}
+                ios_backgroundColor="#e2e8f0"
+              />
+            </View>
+            {remindersEnabled && (
+              <View style={styles.reminderDetails}>
+                <View style={styles.reminderDetailItem}>
+                  <Ionicons name="water-outline" size={14} color={colors.textLight} />
+                  <Text style={styles.reminderDetailText}>Hydration: 10:30 AM, 2:30 PM, 6 PM</Text>
+                </View>
+                <View style={styles.reminderDetailItem}>
+                  <Ionicons name="moon-outline" size={14} color={colors.textLight} />
+                  <Text style={styles.reminderDetailText}>Sleep log: 9:30 AM</Text>
+                </View>
+                <View style={styles.reminderDetailItem}>
+                  <Ionicons name="restaurant-outline" size={14} color={colors.textLight} />
+                  <Text style={styles.reminderDetailText}>Smart meal reminders</Text>
                 </View>
               </View>
             )}
@@ -858,6 +960,54 @@ const styles = StyleSheet.create({
   },
   disconnectButton: {
     backgroundColor: 'rgba(254,226,226,0.8)',
+  },
+  reminderSection: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+  },
+  reminderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  reminderInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: spacing.sm,
+  },
+  reminderTextWrap: {
+    flex: 1,
+  },
+  reminderTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  reminderSubtitle: {
+    fontSize: 12,
+    color: colors.textLight,
+    marginTop: 2,
+  },
+  reminderDetails: {
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.glassBorder,
+    gap: spacing.xs,
+  },
+  reminderDetailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  reminderDetailText: {
+    fontSize: 12,
+    color: colors.textLight,
   },
   privacyNote: {
     flexDirection: 'row',

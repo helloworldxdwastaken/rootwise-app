@@ -329,7 +329,16 @@ export default function FoodScannerScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }} 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent} 
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Premium Initial Screen */}
         {!image ? (
           <Animated.View style={[styles.heroContainer, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
@@ -545,10 +554,7 @@ export default function FoodScannerScreen() {
 
         {/* Manual Input Form */}
         {showManualInput && (
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            style={styles.manualInputContainer}
-          >
+          <View style={styles.manualInputContainer}>
             <View style={styles.manualCard}>
               <View style={styles.manualHeader}>
                 <Text style={styles.manualTitle}>Manual Entry</Text>
@@ -653,7 +659,7 @@ export default function FoodScannerScreen() {
                 )}
               </TouchableOpacity>
             </View>
-          </KeyboardAvoidingView>
+          </View>
         )}
 
         {/* Analysis Results */}
@@ -727,6 +733,7 @@ export default function FoodScannerScreen() {
           </View>
         )}
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
