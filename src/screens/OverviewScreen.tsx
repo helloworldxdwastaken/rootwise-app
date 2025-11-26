@@ -456,13 +456,53 @@ const getEnergyState = (score: number | null): EnergyState => {
                 <Text style={styles.linkText}>+ Add</Text>
               </TouchableOpacity>
             </View>
+            
+            {/* Calorie Goal Tracker */}
+            {(() => {
+              const calorieGoal = healthData?.calorieGoal || 2000;
+              const consumed = foodTotals?.calories || 0;
+              const remaining = calorieGoal - consumed;
+              const progress = Math.min((consumed / calorieGoal) * 100, 100);
+              const isOverBudget = remaining < 0;
+              
+              return (
+                <View style={styles.calorieTracker}>
+                  <View style={styles.calorieHeader}>
+                    <View>
+                      <Text style={styles.calorieConsumed}>{consumed}</Text>
+                      <Text style={styles.calorieSubLabel}>consumed</Text>
+                    </View>
+                    <View style={styles.calorieGoalBox}>
+                      <Text style={[
+                        styles.calorieRemaining,
+                        isOverBudget && styles.calorieOver
+                      ]}>
+                        {isOverBudget ? '+' : ''}{Math.abs(remaining)}
+                      </Text>
+                      <Text style={styles.calorieSubLabel}>
+                        {isOverBudget ? 'over' : 'remaining'}
+                      </Text>
+                    </View>
+                    <View>
+                      <Text style={styles.calorieGoalValue}>{calorieGoal}</Text>
+                      <Text style={styles.calorieSubLabel}>goal</Text>
+                    </View>
+                  </View>
+                  <View style={styles.calorieProgressBg}>
+                    <LinearGradient
+                      colors={isOverBudget ? ['#f87171', '#ef4444'] : [colors.primary, colors.primaryLight]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={[styles.calorieProgressFill, { width: `${Math.min(progress, 100)}%` }]}
+                    />
+                  </View>
+                </View>
+              );
+            })()}
+
             {foodLogs.length > 0 ? (
               <>
                 <View style={styles.foodTotalsRow}>
-                  <View style={styles.foodTotalItem}>
-                    <Text style={styles.foodTotalValue}>{foodTotals?.calories || 0}</Text>
-                    <Text style={styles.foodTotalLabel}>cal</Text>
-                  </View>
                   <View style={styles.foodTotalItem}>
                     <Text style={styles.foodTotalValue}>{foodTotals?.protein || 0}g</Text>
                     <Text style={styles.foodTotalLabel}>protein</Text>
@@ -1307,10 +1347,57 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
+  // Calorie tracker styles
+  calorieTracker: {
+    marginBottom: spacing.md,
+  },
+  calorieHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: spacing.sm,
+  },
+  calorieConsumed: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  calorieGoalBox: {
+    alignItems: 'center',
+  },
+  calorieRemaining: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: colors.success,
+  },
+  calorieOver: {
+    color: '#ef4444',
+  },
+  calorieGoalValue: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    textAlign: 'right',
+  },
+  calorieSubLabel: {
+    fontSize: 11,
+    color: colors.textLight,
+    marginTop: 2,
+  },
+  calorieProgressBg: {
+    height: 8,
+    backgroundColor: colors.background,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  calorieProgressFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
   // Food section styles
   foodTotalsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
     backgroundColor: colors.background,
     borderRadius: borderRadius.md,
     padding: spacing.md,
