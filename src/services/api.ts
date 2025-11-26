@@ -105,8 +105,14 @@ export const profileAPI = {
 
 export const healthAPI = {
   getToday: async () => {
-    const response = await api.get('/health/today');
-    return response.data;
+    try {
+      const response = await api.get('/health/today');
+      console.log('Health today data:', JSON.stringify(response.data, null, 2));
+      return response.data;
+    } catch (error: any) {
+      console.error('Get today error:', error.response?.data || error.message);
+      throw error;
+    }
   },
 
   logMetric: async (data: {
@@ -125,8 +131,15 @@ export const healthAPI = {
   },
 
   analyzeSymptoms: async () => {
-    const response = await api.post('/health/analyze-symptoms');
-    return response.data;
+    try {
+      console.log('Requesting AI health analysis...');
+      const response = await api.post('/health/analyze-symptoms');
+      console.log('AI analysis response:', JSON.stringify(response.data, null, 2));
+      return response.data;
+    } catch (error: any) {
+      console.error('AI analysis error:', error.response?.data || error.message);
+      throw error;
+    }
   },
 };
 

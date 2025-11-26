@@ -46,6 +46,7 @@ export default function OverviewScreen({ navigation }: any) {
   const { user } = useAuth();
   const [healthData, setHealthData] = useState<any>(null);
   const [weeklyData, setWeeklyData] = useState<WeeklyData | null>(null);
+  const [aiInsights, setAiInsights] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
@@ -68,6 +69,12 @@ export default function OverviewScreen({ navigation }: any) {
       ]);
       setHealthData(today);
       setWeeklyData(weekly);
+      // Load any existing AI insights from today's data
+      if (today?.analyzedSymptoms?.length > 0) {
+        setAiInsights(today.analyzedSymptoms);
+      } else if (today?.insights?.length > 0) {
+        setAiInsights(today.insights);
+      }
     } catch (error) {
       console.error('Failed to load health data:', error);
     } finally {
@@ -94,7 +101,15 @@ export default function OverviewScreen({ navigation }: any) {
   const runAnalysis = async () => {
     try {
       setAnalyzing(true);
-      await healthAPI.analyzeSymptoms();
+      const result = await healthAPI.analyzeSymptoms();
+      // Store the AI insights from the response
+      if (result?.insights) {
+        setAiInsights(result.insights);
+      } else if (result?.analyzedSymptoms) {
+        setAiInsights(result.analyzedSymptoms);
+      } else if (Array.isArray(result)) {
+        setAiInsights(result);
+      }
       await loadData();
     } catch (error) {
       console.error('Failed to analyze symptoms:', error);
@@ -168,7 +183,7 @@ const getEnergyState = (score: number | null): EnergyState => {
   }
 
   const energyScore: number | null = healthData?.energyScore ?? null;
-  const analyzedSymptoms = healthData?.analyzedSymptoms || [];
+  const analyzedSymptoms = aiInsights.length > 0 ? aiInsights : (healthData?.analyzedSymptoms || []);
   const hydrationGlasses = healthData?.hydrationGlasses || 0;
   const energyState = getEnergyState(energyScore);
   const weeklyDays = weeklyData?.weekData || [];
