@@ -414,7 +414,7 @@ export default function FoodScannerScreen() {
         keyboardShouldPersistTaps="handled"
       >
         {/* Premium Initial Screen */}
-        {!image ? (
+        {!image && !showManualInput ? (
           <Animated.View style={[styles.heroContainer, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
             {/* Hero Section */}
             <View style={styles.heroSection}>
@@ -519,121 +519,17 @@ export default function FoodScannerScreen() {
               <Text style={styles.bottomInfoText}>Your photos are analyzed securely and never stored</Text>
             </View>
           </Animated.View>
-        ) : (
-          <>
-            {/* Header when image is selected */}
-            <View style={styles.header}>
-              <Text style={styles.title}>Food Scanner</Text>
-              <Text style={styles.subtitle}>
-                Analyzing your meal
-              </Text>
-            </View>
-
-            {/* Image Preview */}
-            <View style={styles.previewContainer}>
-              <Image source={{ uri: image }} style={styles.preview} />
-              <TouchableOpacity style={styles.clearButton} onPress={reset}>
-                <Ionicons name="close-circle" size={32} color="#fff" />
-              </TouchableOpacity>
-            </View>
-          </>
-        )}
-
-        {/* Meal Type Selector */}
-        {image && !analysis && (
-          <View style={styles.mealTypeContainer}>
-            <Text style={styles.sectionLabel}>Meal Type</Text>
-            <View style={styles.mealTypes}>
-              {mealTypes.map((meal) => (
-                <TouchableOpacity
-                  key={meal.key}
-                  style={[
-                    styles.mealTypeButton,
-                    selectedMealType === meal.key && styles.mealTypeButtonActive,
-                  ]}
-                  onPress={() => setSelectedMealType(meal.key)}
-                >
-                  <Ionicons
-                    name={meal.icon}
-                    size={20}
-                    color={selectedMealType === meal.key ? '#fff' : colors.text}
-                  />
-                  <Text
-                    style={[
-                      styles.mealTypeText,
-                      selectedMealType === meal.key && styles.mealTypeTextActive,
-                    ]}
-                  >
-                    {meal.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        )}
-
-        {/* Analyze Button */}
-        {image && !analysis && (
-          <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-            <TouchableOpacity
-              style={[styles.analyzeButton, analyzing && styles.analyzeButtonDisabled]}
-              onPress={analyzeFood}
-              disabled={analyzing}
-            >
-              {analyzing ? (
-                <>
-                  <ActivityIndicator color="#fff" size="small" />
-                  <Text style={styles.analyzeButtonText}>Analyzing...</Text>
-                </>
-              ) : (
-                <>
-                  <Ionicons name="sparkles" size={24} color="#fff" />
-                  <Text style={styles.analyzeButtonText}>Analyze Food</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </Animated.View>
-        )}
-
-        {/* Unclear Image Message */}
-        {unclearResult && !showManualInput && (
-          <View style={styles.unclearContainer}>
-            <View style={styles.unclearCard}>
-              <Ionicons name="warning-outline" size={48} color={colors.warning} />
-              <Text style={styles.unclearTitle}>Couldn't Identify Food</Text>
-              <Text style={styles.unclearReason}>{unclearResult.reason}</Text>
-              <View style={styles.suggestionBox}>
-                <Ionicons name="bulb-outline" size={20} color={colors.info} />
-                <Text style={styles.suggestionText}>{unclearResult.suggestion}</Text>
-              </View>
-              
-              <TouchableOpacity
-                style={styles.retryButton}
-                onPress={() => pickImage(true)}
-              >
-                <Ionicons name="camera" size={20} color="#fff" />
-                <Text style={styles.retryButtonText}>Retake Photo</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={styles.manualButton}
-                onPress={() => setShowManualInput(true)}
-              >
-                <Ionicons name="create-outline" size={20} color={colors.primary} />
-                <Text style={styles.manualButtonText}>Enter Manually</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
-        {/* Manual Input Form */}
-        {showManualInput && (
-          <View style={styles.manualInputContainer}>
+        ) : !image && showManualInput ? (
+          /* Manual Entry Full Screen */
+          <View style={styles.manualFullScreen}>
             <View style={styles.manualCard}>
               <View style={styles.manualHeader}>
                 <Text style={styles.manualTitle}>Manual Entry</Text>
-                <TouchableOpacity onPress={() => setShowManualInput(false)}>
-                  <Ionicons name="close" size={24} color={colors.textLight} />
+                <TouchableOpacity 
+                  onPress={() => setShowManualInput(false)}
+                  style={styles.closeButtonTouchable}
+                >
+                  <Ionicons name="close" size={28} color={colors.textLight} />
                 </TouchableOpacity>
               </View>
               
@@ -644,7 +540,7 @@ export default function FoodScannerScreen() {
                 value={manualFood}
                 onChangeText={(text) => {
                   setManualFood(text);
-                  setIsEstimated(false); // Reset estimation flag when text changes
+                  setIsEstimated(false);
                 }}
                 multiline
               />
@@ -772,7 +668,113 @@ export default function FoodScannerScreen() {
               </TouchableOpacity>
             </View>
           </View>
+        ) : (
+          <>
+            {/* Header when image is selected */}
+            <View style={styles.header}>
+              <Text style={styles.title}>Food Scanner</Text>
+              <Text style={styles.subtitle}>
+                Analyzing your meal
+              </Text>
+            </View>
+
+            {/* Image Preview */}
+            <View style={styles.previewContainer}>
+              <Image source={{ uri: image! }} style={styles.preview} />
+              <TouchableOpacity style={styles.clearButton} onPress={reset}>
+                <Ionicons name="close-circle" size={32} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          </>
         )}
+
+        {/* Meal Type Selector */}
+        {image && !analysis && (
+          <View style={styles.mealTypeContainer}>
+            <Text style={styles.sectionLabel}>Meal Type</Text>
+            <View style={styles.mealTypes}>
+              {mealTypes.map((meal) => (
+                <TouchableOpacity
+                  key={meal.key}
+                  style={[
+                    styles.mealTypeButton,
+                    selectedMealType === meal.key && styles.mealTypeButtonActive,
+                  ]}
+                  onPress={() => setSelectedMealType(meal.key)}
+                >
+                  <Ionicons
+                    name={meal.icon}
+                    size={20}
+                    color={selectedMealType === meal.key ? '#fff' : colors.text}
+                  />
+                  <Text
+                    style={[
+                      styles.mealTypeText,
+                      selectedMealType === meal.key && styles.mealTypeTextActive,
+                    ]}
+                  >
+                    {meal.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Analyze Button */}
+        {image && !analysis && (
+          <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+            <TouchableOpacity
+              style={[styles.analyzeButton, analyzing && styles.analyzeButtonDisabled]}
+              onPress={analyzeFood}
+              disabled={analyzing}
+            >
+              {analyzing ? (
+                <>
+                  <ActivityIndicator color="#fff" size="small" />
+                  <Text style={styles.analyzeButtonText}>Analyzing...</Text>
+                </>
+              ) : (
+                <>
+                  <Ionicons name="sparkles" size={24} color="#fff" />
+                  <Text style={styles.analyzeButtonText}>Analyze Food</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </Animated.View>
+        )}
+
+        {/* Unclear Image Message */}
+        {unclearResult && !showManualInput && (
+          <View style={styles.unclearContainer}>
+            <View style={styles.unclearCard}>
+              <Ionicons name="warning-outline" size={48} color={colors.warning} />
+              <Text style={styles.unclearTitle}>Couldn't Identify Food</Text>
+              <Text style={styles.unclearReason}>{unclearResult.reason}</Text>
+              <View style={styles.suggestionBox}>
+                <Ionicons name="bulb-outline" size={20} color={colors.info} />
+                <Text style={styles.suggestionText}>{unclearResult.suggestion}</Text>
+              </View>
+              
+              <TouchableOpacity
+                style={styles.retryButton}
+                onPress={() => pickImage(true)}
+              >
+                <Ionicons name="camera" size={20} color="#fff" />
+                <Text style={styles.retryButtonText}>Retake Photo</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.manualButton}
+                onPress={() => setShowManualInput(true)}
+              >
+                <Ionicons name="create-outline" size={20} color={colors.primary} />
+                <Text style={styles.manualButtonText}>Enter Manually</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
 
         {/* Analysis Results */}
         {analysis && (
@@ -1304,8 +1306,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   // Manual input styles
+  manualFullScreen: {
+    flex: 1,
+  },
   manualInputContainer: {
     marginTop: 8,
+  },
+  closeButtonTouchable: {
+    padding: 4,
   },
   manualCard: {
     backgroundColor: '#fff',
