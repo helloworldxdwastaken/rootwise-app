@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { pushAPI } from './api';
 
 // ==================== NOTIFICATION CONFIGURATION ====================
 
@@ -71,6 +72,17 @@ export async function requestNotificationPermissions() {
 
       const token = tokenResponse.data;
       console.log('Expo push token:', token);
+      
+      // Register token with backend server for server-sent notifications
+      try {
+        const platform = Platform.OS === 'ios' ? 'ios' : 'android';
+        await pushAPI.registerToken(token, platform);
+        console.log('Push token registered with backend successfully');
+      } catch (backendError) {
+        // Don't fail if backend registration fails - local notifications will still work
+        console.warn('Failed to register push token with backend:', backendError);
+      }
+      
       return token;
     } catch (tokenError: any) {
       // Firebase/FCM not configured - log but don't crash

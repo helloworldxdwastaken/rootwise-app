@@ -194,6 +194,40 @@ export const memoryAPI = {
   },
 };
 
+// ==================== PUSH NOTIFICATIONS ====================
+
+export const pushAPI = {
+  registerToken: async (token: string, platform: 'ios' | 'android') => {
+    try {
+      console.log('Registering push token with backend...');
+      const response = await api.post('/user/push-token', { 
+        token, 
+        platform: platform.toUpperCase() 
+      });
+      console.log('Push token registered:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Push token registration error:', error.response?.data || error.message);
+      throw error;
+    }
+  },
+
+  deactivateToken: async (token: string) => {
+    try {
+      const response = await api.delete('/user/push-token', { data: { token } });
+      return response.data;
+    } catch (error: any) {
+      console.error('Push token deactivation error:', error.response?.data || error.message);
+      throw error;
+    }
+  },
+
+  getTokens: async () => {
+    const response = await api.get('/user/push-token');
+    return response.data;
+  },
+};
+
 // ==================== FOOD ====================
 
 export const foodAPI = {
