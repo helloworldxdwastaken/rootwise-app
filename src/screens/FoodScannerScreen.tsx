@@ -601,7 +601,7 @@ export default function FoodScannerScreen() {
               </View>
 
               {/* Meal Type in manual mode */}
-              <Text style={styles.inputLabel}>Meal Type</Text>
+              <Text style={[styles.inputLabel, { marginTop: 20 }]}>Meal Type</Text>
               <View style={styles.mealTypes}>
                 {mealTypes.map((meal) => (
                   <TouchableOpacity
@@ -630,7 +630,7 @@ export default function FoodScannerScreen() {
               </View>
               
               <TouchableOpacity
-                style={[styles.logButton, saving && styles.logButtonDisabled]}
+                style={[styles.logButton, styles.manualLogButton, saving && styles.logButtonDisabled]}
                 onPress={logManualFood}
                 disabled={saving}
               >
@@ -1182,7 +1182,7 @@ const styles = StyleSheet.create({
   manualCard: {
     backgroundColor: '#fff',
     borderRadius: 16,
-    padding: 20,
+    padding: 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
@@ -1204,8 +1204,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: colors.textLight,
-    marginBottom: 8,
-    marginTop: 12,
+    marginBottom: 10,
+    marginTop: 16,
   },
   textInput: {
     backgroundColor: colors.background,
@@ -1229,6 +1229,7 @@ const styles = StyleSheet.create({
   macroInputs: {
     flexDirection: 'row',
     gap: 12,
+    marginBottom: 8,
   },
   macroInputGroup: {
     flex: 1,
@@ -1247,6 +1248,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.glassBorder,
     textAlign: 'center',
+  },
+  manualLogButton: {
+    marginTop: 24,
   },
 });
 
