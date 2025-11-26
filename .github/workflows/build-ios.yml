@@ -94,24 +94,34 @@ jobs:
             echo "✓ Podfile already patched"
           else
             # Use awk to properly inject into the post_install block
+            # Match 'end' with any amount of leading whitespace
             awk '
-            BEGIN { in_post_install = 0; injected = 0 }
-            /post_install do \|installer\|/ { in_post_install = 1; print; next }
-            in_post_install && /^end$/ && !injected {
-              print "  # Fix for lottie Swift Xcode fix"
-              print "  installer.pods_project.targets.each do |target|"
-              print "    target.build_configurations.each do |config|"
-              print "      if config.build_settings[\"IPHONEOS_DEPLOYMENT_TARGET\"].to_f < 13.0"
-              print "        config.build_settings[\"IPHONEOS_DEPLOYMENT_TARGET\"] = \"13.0\""
-              print "      end"
-              print "      if target.name == \"lottie-react-native\" || target.name == \"lottie-ios\""
-              print "        config.build_settings[\"SWIFT_VERSION\"] = \"5.0\""
-              print "        config.build_settings[\"CLANG_ENABLE_MODULES\"] = \"YES\""
-              print "      end"
-              print "    end"
-              print "  end"
-              injected = 1
+            BEGIN { in_post_install = 0; injected = 0; depth = 0 }
+            /post_install do \|installer\|/ { 
+              in_post_install = 1
+              print
+              next 
             }
+            in_post_install && /^\s*end\s*$/ {
+              if (depth == 0 && !injected) {
+                print "  # Fix for lottie Swift Xcode fix"
+                print "  installer.pods_project.targets.each do |target|"
+                print "    target.build_configurations.each do |config|"
+                print "      if config.build_settings[\"IPHONEOS_DEPLOYMENT_TARGET\"].to_f < 13.0"
+                print "        config.build_settings[\"IPHONEOS_DEPLOYMENT_TARGET\"] = \"13.0\""
+                print "      end"
+                print "      if target.name == \"lottie-react-native\" || target.name == \"lottie-ios\""
+                print "        config.build_settings[\"SWIFT_VERSION\"] = \"5.0\""
+                print "        config.build_settings[\"CLANG_ENABLE_MODULES\"] = \"YES\""
+                print "      end"
+                print "    end"
+                print "  end"
+                injected = 1
+              }
+              depth--
+              if (depth < 0) depth = 0
+            }
+            in_post_install && /\bdo\b/ { depth++ }
             { print }
             ' Podfile > Podfile.tmp
             
