@@ -10,7 +10,7 @@ on:
 jobs:
   build-ios:
     name: Build iOS IPA (Release - Unsigned)
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -20,13 +20,13 @@ jobs:
         with:
           node-version: '20'
 
-      - name: List available Xcode versions
+      - name: Show Xcode version
         run: |
-          echo "Available Xcode versions:"
-          ls /Applications | grep Xcode
-          echo ""
-          echo "Current Xcode:"
+          echo "Current Xcode version:"
           xcodebuild -version
+          echo ""
+          echo "Available Xcode versions:"
+          ls /Applications | grep Xcode || true
 
       - name: Clean and install dependencies
         run: |
@@ -35,7 +35,6 @@ jobs:
           npm install --legacy-peer-deps
           
           # Remove react-native-reanimated if it was pulled in as a transitive dependency
-          # This library requires New Architecture which we have disabled
           if [ -d "node_modules/react-native-reanimated" ]; then
             echo "⚠️ Found react-native-reanimated as transitive dependency - removing it"
             rm -rf node_modules/react-native-reanimated
@@ -44,105 +43,119 @@ jobs:
       - name: Prebuild iOS native project
         run: npx expo prebuild --platform ios --clean
 
-      - name: Remove react-native-reanimated completely
-        run: |
-          echo "🔍 Checking for react-native-reanimated..."
-          
-          # Remove from node_modules if it exists (transitive dependency)
-          if [ -d "node_modules/react-native-reanimated" ]; then
-            echo "⚠️ Found react-native-reanimated in node_modules - removing"
-            rm -rf node_modules/react-native-reanimated
-          fi
-          
-          # Remove from Podfile if referenced
-          if [ -f "ios/Podfile" ]; then
-            echo "📝 Patching ios/Podfile to remove reanimated..."
-            sed -i '' '/RNReanimated/d' ios/Podfile 2>/dev/null || sed -i '/RNReanimated/d' ios/Podfile
-            sed -i '' '/react-native-reanimated/d' ios/Podfile 2>/dev/null || sed -i '/react-native-reanimated/d' ios/Podfile
-          fi
-          
-          echo "✅ react-native-reanimated removal complete"
-
-      - name: Check if lottie-react-native Podfile patch is needed
+      - name: Patch Podfile for lottie-react-native Xcode 16 compatibility
         run: |
           cd ios
-          echo "Skipping Podfile patching - trying build with Xcode 15 only"
-          echo "If lottie build fails, we'll add the patch"
+          echo "📝 Adding post_install hooks for lottie-react-native Xcode 16 compatibility..."
+          
+          # Create a Ruby script to properly patch the Podfile
+          cat > patch_podfile.rb << 'RUBY_SCRIPT'
+          podfile_path = 'Podfile'
+          content = File.read(podfile_path)
+          
+          # The lottie fix code to inject
+          lottie_fix = <<-FIX
+          
+            # Fix lottie-react-native Swift compilation for Xcode 16
+            installer.pods_project.targets.each do |target|
+              if target.name == 'lottie-react-native' || target.name == 'lottie-ios'
+                target.build_configurations.each do |config|
+                  config.build_settings['SWIFT_VERSION'] = '5.0'
+                  config.build_settings['CLANG_ENABLE_MODULES'] = 'YES'
+                  config.build_settings['BUILD_LIBRARY_FOR_DISTRIBUTION'] = 'NO'
+                  config.build_settings['SWIFT_COMPILATION_MODE'] = 'wholemodule'
+                end
+              end
+            end
+          FIX
+          
+          # Find the post_install block and inject before the closing 'end'
+          if content.include?('post_install do |installer|')
+            # Find the last 'end' of the post_install block by looking for pattern
+            # We need to inject our code inside the existing post_install block
+            
+            # Strategy: Find 'post_install do |installer|' and then find the matching 'end'
+            # Inject our code right before that end
+            
+            lines = content.lines
+            post_install_start = nil
+            post_install_end = nil
+            indent_level = 0
+            
+            lines.each_with_index do |line, index|
+              if line =~ /post_install\s+do\s*\|installer\|/
+                post_install_start = index
+                indent_level = 1
+              elsif post_install_start && indent_level > 0
+                indent_level += line.scan(/\bdo\b/).count
+                indent_level -= line.scan(/\bend\b/).count
+                if indent_level == 0
+                  post_install_end = index
+                  break
+                end
+              end
+            end
+            
+            if post_install_start && post_install_end
+              # Insert our fix just before the closing end
+              lines.insert(post_install_end, lottie_fix)
+              content = lines.join
+              puts "✅ Injected lottie fix into existing post_install block"
+            else
+              puts "⚠️ Could not find post_install block boundaries"
+            end
+          else
+            # No post_install block exists, add one at the end
+            content += <<-BLOCK
+
+post_install do |installer|
+#{lottie_fix}
+end
+            BLOCK
+            puts "✅ Added new post_install block with lottie fix"
+          end
+          
+          File.write(podfile_path, content)
+          puts "✅ Podfile patched successfully"
+          RUBY_SCRIPT
+          
+          ruby patch_podfile.rb
+          rm patch_podfile.rb
+          
           echo ""
-          echo "📄 Current Podfile (last 30 lines):"
-          tail -30 Podfile
+          echo "📄 Podfile post_install section:"
+          grep -A 50 "post_install" Podfile | head -60 || echo "No post_install found"
 
-      - name: Clean CocoaPods and build caches
+      - name: Clean CocoaPods caches
         run: |
           cd ios
-          # Clean all CocoaPods caches
           pod cache clean --all || true
           rm -rf ~/Library/Caches/CocoaPods || true
           rm -rf ~/Library/Developer/Xcode/DerivedData/* || true
           rm -rf Pods || true
-          rm -rf build || true
           rm -rf Podfile.lock || true
 
       - name: Install CocoaPods dependencies
         run: |
           cd ios
-          pod install --repo-update --verbose
+          pod install --repo-update
 
-      - name: Fix lottie-react-native Swift settings for Xcode 16 using xcodeproj
+      - name: Verify lottie Swift settings applied
         run: |
           cd ios
-          echo "📝 Fixing lottie-react-native Swift settings using xcodeproj gem..."
-          
-          # Install xcodeproj gem if not present
-          gem install xcodeproj
-          
-          # Use Ruby with xcodeproj to properly modify the project
-          ruby << 'RUBY'
-          require 'xcodeproj'
-          
-          project_path = 'Pods/Pods.xcodeproj'
-          project = Xcodeproj::Project.open(project_path)
-          
-          modified = false
-          
-          project.targets.each do |target|
-            if target.name == 'lottie-react-native' || target.name == 'lottie-ios'
-              puts "Configuring target: #{target.name}"
-              
-              target.build_configurations.each do |config|
-                # Set SWIFT_VERSION
-                config.build_settings['SWIFT_VERSION'] = '5.0'
-                config.build_settings['CLANG_ENABLE_MODULES'] = 'YES'
-                
-                # Ensure minimum deployment target
-                if config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'].to_f < 13.0
-                  config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
-                end
-                
-                puts "  #{config.name}: SWIFT_VERSION = 5.0"
-                modified = true
-              end
-            end
-          end
-          
-          if modified
-            project.save
-            puts "✅ Successfully patched lottie targets"
-          else
-            puts "⚠️ No lottie targets found to patch"
-          end
-          RUBY
-          
-          echo "Patch complete!"
+          echo "🔍 Checking if lottie-react-native has SWIFT_VERSION set..."
+          if [ -f "Pods/Pods.xcodeproj/project.pbxproj" ]; then
+            grep -A 5 "lottie-react-native" Pods/Pods.xcodeproj/project.pbxproj | grep -i "SWIFT" | head -10 || echo "Swift settings not found in project file directly"
+          fi
+          echo ""
+          echo "✅ Pod install completed, Swift settings should be applied by post_install hooks"
 
       - name: Build iOS app (Unsigned)
         run: |
           cd ios
           set -o pipefail
           
-          # Clean all build artifacts and caches before building
           xcodebuild clean -workspace Rootwise.xcworkspace -scheme Rootwise || true
-          rm -rf build/DerivedData || true
           rm -rf ~/Library/Developer/Xcode/DerivedData/ModuleCache.noindex || true
           
           xcodebuild -workspace Rootwise.xcworkspace \
@@ -158,11 +171,6 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             GCC_TREAT_WARNINGS_AS_ERRORS=NO \
             SWIFT_TREAT_WARNINGS_AS_ERRORS=NO \
-            GCC_WARN_INHIBIT_ALL_WARNINGS=YES \
-            CLANG_WARN_DOCUMENTATION_COMMENTS=NO \
-            OTHER_CFLAGS="-w" \
-            OTHER_SWIFT_FLAGS="-suppress-warnings" \
-            -allowProvisioningUpdates \
             2>&1 | tee ../ios-build.log
 
       - name: Create IPA (unsigned)
@@ -192,4 +200,3 @@ jobs:
 
       - name: Build Complete
         run: echo "✅ Unsigned iOS IPA ready for download from Artifacts"
-
