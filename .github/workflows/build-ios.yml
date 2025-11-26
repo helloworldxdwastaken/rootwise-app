@@ -21,23 +21,11 @@ jobs:
           node-version: '20'
 
       - name: List available Xcode versions
-        run: ls /Applications | grep Xcode
-
-      - name: Select Xcode 15 (latest available)
         run: |
-          # Try to use Xcode 15.x (any minor version) to avoid Xcode 16 lottie issues
-          if [ -d "/Applications/Xcode_15.2.app" ]; then
-            sudo xcode-select -s /Applications/Xcode_15.2.app/Contents/Developer
-            echo "Using Xcode 15.2"
-          elif [ -d "/Applications/Xcode_15.1.app" ]; then
-            sudo xcode-select -s /Applications/Xcode_15.1.app/Contents/Developer
-            echo "Using Xcode 15.1"
-          elif [ -d "/Applications/Xcode_15.0.app" ]; then
-            sudo xcode-select -s /Applications/Xcode_15.0.app/Contents/Developer
-            echo "Using Xcode 15.0"
-          else
-            echo "⚠️ No Xcode 15.x found, using default (may have lottie issues with Xcode 16)"
-          fi
+          echo "Available Xcode versions:"
+          ls /Applications | grep Xcode
+          echo ""
+          echo "Current Xcode:"
           xcodebuild -version
 
       - name: Clean and install dependencies
@@ -99,6 +87,67 @@ jobs:
         run: |
           cd ios
           pod install --repo-update --verbose
+
+      - name: Fix lottie-react-native Swift settings for Xcode 16
+        run: |
+          cd ios
+          echo "📝 Fixing lottie-react-native Swift settings directly in Xcode project..."
+          
+          # Use PlistBuddy to modify the project settings directly
+          PROJECT_FILE="Pods/Pods.xcodeproj/project.pbxproj"
+          
+          if [ -f "$PROJECT_FILE" ]; then
+            # Use sed to add SWIFT_VERSION = 5.0 to lottie targets
+            # This is a simpler approach than parsing the complex project file
+            echo "Patching Xcode project file..."
+            
+            # Backup original
+            cp "$PROJECT_FILE" "$PROJECT_FILE.backup"
+            
+            # Add SWIFT_VERSION and CLANG_ENABLE_MODULES to lottie build settings
+            # We'll use a Python script for this since sed with pbxproj is fragile
+            python3 << 'PYTHON'
+          import re
+          
+          with open('Pods/Pods.xcodeproj/project.pbxproj', 'r') as f:
+              content = f.read()
+          
+          # Find lottie-react-native and lottie-ios targets' build configuration sections
+          # and add SWIFT_VERSION if not present
+          modified = False
+          
+          # Pattern to find buildSettings sections
+          pattern = r'(buildSettings = \{[^}]*?)(PRODUCT_NAME = "?(lottie-react-native|lottie-ios)"?;[^}]*?)(\})'
+          
+          def add_swift_settings(match):
+              global modified
+              prefix = match.group(1)
+              middle = match.group(2)
+              suffix = match.group(4)
+              
+              # Check if SWIFT_VERSION already exists
+              if 'SWIFT_VERSION' not in middle:
+                  modified = True
+                  # Add SWIFT_VERSION and CLANG_ENABLE_MODULES
+                  middle += '\n\t\t\t\tSWIFT_VERSION = 5.0;'
+                  middle += '\n\t\t\t\tCLANG_ENABLE_MODULES = YES;'
+              
+              return prefix + middle + suffix
+          
+          content = re.sub(pattern, add_swift_settings, content, flags=re.DOTALL)
+          
+          if modified:
+              with open('Pods/Pods.xcodeproj/project.pbxproj', 'w') as f:
+                  f.write(content)
+              print("✅ Successfully patched lottie targets in Xcode project")
+          else:
+              print("ℹ️ No changes needed or targets not found")
+          PYTHON
+            
+            echo "Patch complete!"
+          else
+            echo "⚠️ Project file not found"
+          fi
 
       - name: Build iOS app (Unsigned)
         run: |
