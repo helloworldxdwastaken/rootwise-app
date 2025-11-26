@@ -103,25 +103,44 @@ export const initializeHealthKit = async (): Promise<HealthPermissionStatus & { 
 
   return new Promise((resolve) => {
     console.log('Requesting HealthKit permissions...');
-    HealthKit.initHealthKit(HEALTHKIT_PERMISSIONS, (error: string) => {
-      if (error) {
-        console.log('HealthKit init error:', error);
-        // Check if user denied or if there's an actual error
-        const isDenied = error.toLowerCase().includes('denied') || error.toLowerCase().includes('not determined');
-        resolve({
-          authorized: false,
-          shouldRequest: isDenied,
-          deniedPermissions: [isDenied ? 'Please allow access in Health app' : error],
-        });
-      } else {
-        console.log('HealthKit initialized successfully');
-        resolve({
-          authorized: true,
-          shouldRequest: false,
-          deniedPermissions: [],
-        });
-      }
-    });
+    try {
+      HealthKit.initHealthKit(HEALTHKIT_PERMISSIONS, (error: any, results: any) => {
+        try {
+          if (error) {
+            console.log('HealthKit init error:', error);
+            const errorStr = typeof error === 'string' ? error : (error?.message || JSON.stringify(error));
+            // Check if user denied or if there's an actual error
+            const isDenied = errorStr.toLowerCase().includes('denied') || errorStr.toLowerCase().includes('not determined');
+            resolve({
+              authorized: false,
+              shouldRequest: isDenied,
+              deniedPermissions: [isDenied ? 'Please allow access in Health app' : errorStr],
+            });
+          } else {
+            console.log('HealthKit initialized successfully', results);
+            resolve({
+              authorized: true,
+              shouldRequest: false,
+              deniedPermissions: [],
+            });
+          }
+        } catch (callbackError) {
+          console.log('HealthKit callback error:', callbackError);
+          resolve({
+            authorized: false,
+            shouldRequest: false,
+            deniedPermissions: ['HealthKit callback error - please try again'],
+          });
+        }
+      });
+    } catch (initError) {
+      console.log('HealthKit initHealthKit error:', initError);
+      resolve({
+        authorized: false,
+        shouldRequest: false,
+        deniedPermissions: ['HealthKit initialization failed'],
+      });
+    }
   });
 };
 
@@ -144,8 +163,13 @@ export const isHealthKitAvailable = async (): Promise<boolean> => {
     try {
       if (typeof HealthKit.isAvailable === 'function') {
         HealthKit.isAvailable((error: any, available: boolean) => {
-          console.log('HealthKit.isAvailable result:', { error, available });
-          resolve(!error && available);
+          try {
+            console.log('HealthKit.isAvailable result:', { error, available });
+            resolve(!error && available);
+          } catch (callbackError) {
+            console.log('HealthKit isAvailable callback error:', callbackError);
+            resolve(true); // Assume available and let initHealthKit handle it
+          }
         });
       } else {
         // Some versions don't have isAvailable, try to init directly
