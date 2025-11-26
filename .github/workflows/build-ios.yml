@@ -101,8 +101,8 @@ jobs:
             echo "    end" >> lottie_fix.txt
             echo "  end" >> lottie_fix.txt
             
-            # Insert before the last 'end' in the file
-            head -n -1 Podfile > Podfile.tmp
+            # Insert before the last 'end' in the file (using sed for macOS compatibility)
+            sed '$d' Podfile > Podfile.tmp
             cat lottie_fix.txt >> Podfile.tmp
             echo "end" >> Podfile.tmp
             mv Podfile.tmp Podfile
