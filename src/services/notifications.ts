@@ -393,6 +393,67 @@ export async function scheduleDailyReminders() {
   console.log('Daily reminders scheduled successfully');
 }
 
+// ==================== PERMISSION CHECK ====================
+
+/**
+ * Check if system notification permissions are granted
+ * This does NOT try to get a push token - just checks permissions
+ */
+export async function checkNotificationPermissions(): Promise<{
+  granted: boolean;
+  canAskAgain: boolean;
+}> {
+  try {
+    const { status, canAskAgain } = await Notifications.getPermissionsAsync();
+    return {
+      granted: status === 'granted',
+      canAskAgain: canAskAgain ?? true,
+    };
+  } catch (error) {
+    console.error('Error checking notification permissions:', error);
+    return { granted: false, canAskAgain: true };
+  }
+}
+
+/**
+ * Request system notification permissions only (no push token)
+ * Returns true if permissions are granted
+ */
+export async function requestSystemPermissions(): Promise<boolean> {
+  try {
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    
+    if (existingStatus === 'granted') {
+      return true;
+    }
+
+    const { status } = await Notifications.requestPermissionsAsync();
+    
+    if (status === 'granted') {
+      // Set up Android notification channels
+      if (Platform.OS === 'android') {
+        await Notifications.setNotificationChannelAsync('default', {
+          name: 'Default',
+          importance: Notifications.AndroidImportance.MAX,
+        });
+        
+        await Notifications.setNotificationChannelAsync('reminders', {
+          name: 'Health Reminders',
+          importance: Notifications.AndroidImportance.HIGH,
+          description: 'Reminders for hydration, sleep logging, and food tracking',
+          sound: 'default',
+        });
+      }
+      return true;
+    }
+
+    return false;
+  } catch (error) {
+    console.error('Error requesting notification permissions:', error);
+    return false;
+  }
+}
+
 // ==================== TOGGLE REMINDERS ====================
 
 export async function setRemindersEnabled(enabled: boolean) {

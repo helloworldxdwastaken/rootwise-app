@@ -27,7 +27,8 @@ import {
 import {
   areRemindersEnabled,
   setRemindersEnabled,
-  requestNotificationPermissions,
+  requestSystemPermissions,
+  checkNotificationPermissions,
   scheduleDailyReminders,
 } from '../services/notifications';
 import { colors, spacing, borderRadius } from '../constants/theme';
@@ -58,27 +59,57 @@ export default function SettingsScreen({ navigation }: any) {
   }, []);
   
   const loadReminderSettings = async () => {
-    const enabled = await areRemindersEnabled();
-    setRemindersEnabledState(enabled);
+    // Check both app setting AND system permission
+    const appEnabled = await areRemindersEnabled();
+    const { granted: systemEnabled } = await checkNotificationPermissions();
+    
+    // Toggle should only be ON if both app setting is enabled AND system allows it
+    // If system permissions are off but app setting is on, the toggle shows on
+    // but will prompt user to enable system permissions when they interact
+    setRemindersEnabledState(appEnabled);
+    
+    // If system permissions were revoked, let user know on next toggle attempt
+    if (appEnabled && !systemEnabled) {
+      console.log('Note: App reminders enabled but system notifications are off');
+    }
   };
   
   const handleToggleReminders = async (value: boolean) => {
     if (value) {
-      // Request permissions if enabling
-      const token = await requestNotificationPermissions();
-      if (token === null) {
-        Alert.alert(
-          'Permissions Required',
-          'Please enable notifications in your device settings to receive reminders.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Open Settings', onPress: () => Linking.openSettings() },
-          ]
-        );
-        return;
+      // Check if system permissions are already granted
+      const { granted, canAskAgain } = await checkNotificationPermissions();
+      
+      if (!granted) {
+        // Try to request permissions
+        const permissionGranted = await requestSystemPermissions();
+        
+        if (!permissionGranted) {
+          // Permissions denied - show appropriate message
+          if (canAskAgain) {
+            Alert.alert(
+              'Permissions Required',
+              'Notifications are needed to send you health reminders. Please allow notifications when prompted.',
+              [{ text: 'OK' }]
+            );
+          } else {
+            // User has permanently denied - need to go to settings
+            Alert.alert(
+              'Notifications Disabled',
+              Platform.OS === 'ios'
+                ? 'To enable reminders, go to Settings > Rootwise > Notifications and turn them on.'
+                : 'To enable reminders, go to Settings > Apps > Rootwise > Notifications and turn them on.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Open Settings', onPress: () => Linking.openSettings() },
+              ]
+            );
+          }
+          return;
+        }
       }
     }
     
+    // Update app state and schedule/cancel reminders
     setRemindersEnabledState(value);
     await setRemindersEnabled(value);
     
