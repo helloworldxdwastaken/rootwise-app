@@ -226,6 +226,23 @@ export const pushAPI = {
     const response = await api.get('/user/push-token');
     return response.data;
   },
+
+  // Send a test notification to verify push is working
+  sendTestNotification: async () => {
+    try {
+      const response = await api.post('/notifications/send', { type: 'test' });
+      return response.data;
+    } catch (error: any) {
+      console.error('Test notification error:', error.response?.data || error.message);
+      throw error;
+    }
+  },
+
+  // Trigger different notification types
+  sendNotification: async (type: 'test' | 'weekly_summary' | 'pattern' | 'insight', body?: string) => {
+    const response = await api.post('/notifications/send', { type, body });
+    return response.data;
+  },
 };
 
 // ==================== FOOD ====================
