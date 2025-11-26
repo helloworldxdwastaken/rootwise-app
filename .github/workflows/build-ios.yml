@@ -50,10 +50,6 @@ jobs:
           cd ios
           set -o pipefail
           
-          # Get Reanimated version for preprocessor define
-          REANIMATED_VERSION=$(node -p "require('../node_modules/react-native-reanimated/package.json').version")
-          echo "Building with Reanimated version: $REANIMATED_VERSION"
-          
           # Clean all build artifacts and caches before building
           xcodebuild clean -workspace Rootwise.xcworkspace -scheme Rootwise || true
           rm -rf build/DerivedData || true
@@ -70,7 +66,7 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
-            OTHER_CFLAGS="-Wno-nullability-completeness -DREANIMATED_VERSION_STRING=\\\"$REANIMATED_VERSION\\\"" \
+            OTHER_CFLAGS="-Wno-nullability-completeness" \
             -allowProvisioningUpdates \
             2>&1 | tee ../ios-build.log
 
