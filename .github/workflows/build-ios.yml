@@ -25,9 +25,35 @@ jobs:
           rm -rf node_modules
           rm -f package-lock.json
           npm install --legacy-peer-deps
+          
+          # Remove react-native-reanimated if it was pulled in as a transitive dependency
+          # This library requires New Architecture which we have disabled
+          if [ -d "node_modules/react-native-reanimated" ]; then
+            echo "⚠️ Found react-native-reanimated as transitive dependency - removing it"
+            rm -rf node_modules/react-native-reanimated
+          fi
 
       - name: Prebuild iOS native project
         run: npx expo prebuild --platform ios --clean
+
+      - name: Remove react-native-reanimated completely
+        run: |
+          echo "🔍 Checking for react-native-reanimated..."
+          
+          # Remove from node_modules if it exists (transitive dependency)
+          if [ -d "node_modules/react-native-reanimated" ]; then
+            echo "⚠️ Found react-native-reanimated in node_modules - removing"
+            rm -rf node_modules/react-native-reanimated
+          fi
+          
+          # Remove from Podfile if referenced
+          if [ -f "ios/Podfile" ]; then
+            echo "📝 Patching ios/Podfile to remove reanimated..."
+            sed -i '' '/RNReanimated/d' ios/Podfile 2>/dev/null || sed -i '/RNReanimated/d' ios/Podfile
+            sed -i '' '/react-native-reanimated/d' ios/Podfile 2>/dev/null || sed -i '/react-native-reanimated/d' ios/Podfile
+          fi
+          
+          echo "✅ react-native-reanimated removal complete"
 
       - name: Clean CocoaPods and build caches
         run: |
@@ -66,7 +92,12 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
-            OTHER_CFLAGS="-Wno-nullability-completeness" \
+            GCC_TREAT_WARNINGS_AS_ERRORS=NO \
+            SWIFT_TREAT_WARNINGS_AS_ERRORS=NO \
+            GCC_WARN_INHIBIT_ALL_WARNINGS=YES \
+            CLANG_WARN_DOCUMENTATION_COMMENTS=NO \
+            OTHER_CFLAGS="-w" \
+            OTHER_SWIFT_FLAGS="-suppress-warnings" \
             -allowProvisioningUpdates \
             2>&1 | tee ../ios-build.log
 

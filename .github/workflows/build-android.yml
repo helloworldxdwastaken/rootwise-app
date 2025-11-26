@@ -31,9 +31,37 @@ jobs:
           rm -rf node_modules
           rm -f package-lock.json
           npm install --legacy-peer-deps
+          
+          # Remove react-native-reanimated if it was pulled in as a transitive dependency
+          # This library requires New Architecture which we have disabled
+          if [ -d "node_modules/react-native-reanimated" ]; then
+            echo "⚠️ Found react-native-reanimated as transitive dependency - removing it"
+            rm -rf node_modules/react-native-reanimated
+          fi
 
       - name: Prebuild Android native project
         run: npx expo prebuild --platform android --clean
+
+      - name: Remove react-native-reanimated completely
+        run: |
+          echo "🔍 Checking for react-native-reanimated..."
+          
+          # Remove from node_modules if it exists (transitive dependency)
+          if [ -d "node_modules/react-native-reanimated" ]; then
+            echo "⚠️ Found react-native-reanimated in node_modules - removing"
+            rm -rf node_modules/react-native-reanimated
+          fi
+          
+          # Remove from settings.gradle include
+          if [ -f "android/settings.gradle" ]; then
+            echo "📝 Patching android/settings.gradle to remove reanimated..."
+            sed -i '/react-native-reanimated/d' android/settings.gradle
+          fi
+          
+          # Remove any reanimated project references in build files
+          find android -name "*.gradle" -type f -exec sed -i '/react-native-reanimated/d' {} \; 2>/dev/null || true
+          
+          echo "✅ react-native-reanimated removal complete"
 
       - name: Fix hermesEnabled property in build.gradle
         run: |
