@@ -75,6 +75,15 @@ jobs:
           
           echo "✅ react-native-reanimated removal complete"
 
+      - name: Debug - Show original Podfile structure
+        run: |
+          cd ios
+          echo "📄 Original Podfile (last 40 lines):"
+          tail -40 Podfile
+          echo ""
+          echo "Checking for post_install:"
+          grep -n "post_install" Podfile || echo "No post_install found"
+
       - name: Patch Podfile for lottie-react-native and Xcode 15 compatibility
         run: |
           cd ios
@@ -84,36 +93,35 @@ jobs:
           if grep -q "lottie Swift Xcode fix" Podfile; then
             echo "✓ Podfile already patched"
           else
-            echo "Injecting lottie fix into Podfile..."
+            # Use awk to properly inject into the post_install block
+            awk '
+            BEGIN { in_post_install = 0; injected = 0 }
+            /post_install do \|installer\|/ { in_post_install = 1; print; next }
+            in_post_install && /^end$/ && !injected {
+              print "  # Fix for lottie Swift Xcode fix"
+              print "  installer.pods_project.targets.each do |target|"
+              print "    target.build_configurations.each do |config|"
+              print "      if config.build_settings[\"IPHONEOS_DEPLOYMENT_TARGET\"].to_f < 13.0"
+              print "        config.build_settings[\"IPHONEOS_DEPLOYMENT_TARGET\"] = \"13.0\""
+              print "      end"
+              print "      if target.name == \"lottie-react-native\" || target.name == \"lottie-ios\""
+              print "        config.build_settings[\"SWIFT_VERSION\"] = \"5.0\""
+              print "        config.build_settings[\"CLANG_ENABLE_MODULES\"] = \"YES\""
+              print "      end"
+              print "    end"
+              print "  end"
+              injected = 1
+            }
+            { print }
+            ' Podfile > Podfile.tmp
             
-            # Create the fix code using echo
-            echo "" > lottie_fix.txt
-            echo "  # Fix for lottie Swift Xcode fix" >> lottie_fix.txt
-            echo "  installer.pods_project.targets.each do |target|" >> lottie_fix.txt
-            echo "    target.build_configurations.each do |config|" >> lottie_fix.txt
-            echo "      if config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'].to_f < 13.0" >> lottie_fix.txt
-            echo "        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'" >> lottie_fix.txt
-            echo "      end" >> lottie_fix.txt
-            echo "      if target.name == 'lottie-react-native' || target.name == 'lottie-ios'" >> lottie_fix.txt
-            echo "        config.build_settings['SWIFT_VERSION'] = '5.0'" >> lottie_fix.txt
-            echo "        config.build_settings['CLANG_ENABLE_MODULES'] = 'YES'" >> lottie_fix.txt
-            echo "      end" >> lottie_fix.txt
-            echo "    end" >> lottie_fix.txt
-            echo "  end" >> lottie_fix.txt
-            
-            # Insert before the last 'end' in the file (using sed for macOS compatibility)
-            sed '$d' Podfile > Podfile.tmp
-            cat lottie_fix.txt >> Podfile.tmp
-            echo "end" >> Podfile.tmp
             mv Podfile.tmp Podfile
-            rm lottie_fix.txt
-            
             echo "✅ Podfile patched successfully"
           fi
           
           echo ""
-          echo "📄 Updated Podfile (last 30 lines):"
-          tail -30 Podfile
+          echo "📄 Updated Podfile (last 40 lines):"
+          tail -40 Podfile
 
       - name: Clean CocoaPods and build caches
         run: |
