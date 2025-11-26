@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { chatAPI, healthAPI } from '../services/api';
+import { chatAPI, healthAPI, foodAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { colors } from '../constants/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -212,8 +212,18 @@ export default function ChatScreen({ navigation }: any) {
     initializedRef.current = true;
 
     try {
-      const today = await healthAPI.getToday();
-      setHealthContext(today);
+      const [today, foodData] = await Promise.all([
+        healthAPI.getToday(),
+        foodAPI.getLogs().catch(() => ({ foodLogs: [], totals: null })),
+      ]);
+      
+      // Combine health and food data into context
+      const context = {
+        ...today,
+        foodLogs: foodData.foodLogs || [],
+        foodTotals: foodData.totals || null,
+      };
+      setHealthContext(context);
       
       // Set personalized welcome message based on health data
       let welcomeContent = `Hi ${user?.name || 'there'}! `;
@@ -245,8 +255,17 @@ export default function ChatScreen({ navigation }: any) {
 
   const refreshHealthContext = async () => {
     try {
-      const today = await healthAPI.getToday();
-      setHealthContext(today);
+      const [today, foodData] = await Promise.all([
+        healthAPI.getToday(),
+        foodAPI.getLogs().catch(() => ({ foodLogs: [], totals: null })),
+      ]);
+      
+      const context = {
+        ...today,
+        foodLogs: foodData.foodLogs || [],
+        foodTotals: foodData.totals || null,
+      };
+      setHealthContext(context);
     } catch (error) {
       console.error('Failed to refresh health context:', error);
     }

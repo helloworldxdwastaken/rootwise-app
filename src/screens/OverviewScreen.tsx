@@ -14,7 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
 import { useAuth } from '../contexts/AuthContext';
-import { healthAPI } from '../services/api';
+import { healthAPI, foodAPI } from '../services/api';
 import { colors, spacing, borderRadius } from '../constants/theme';
 import { EmotionShowcase, EmotionKey } from '../components/EmotionShowcase';
 
@@ -47,6 +47,8 @@ export default function OverviewScreen({ navigation }: any) {
   const [healthData, setHealthData] = useState<any>(null);
   const [weeklyData, setWeeklyData] = useState<WeeklyData | null>(null);
   const [aiInsights, setAiInsights] = useState<any[]>([]);
+  const [foodLogs, setFoodLogs] = useState<any[]>([]);
+  const [foodTotals, setFoodTotals] = useState<{ calories: number; protein: number; carbs: number; fat: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
@@ -63,12 +65,15 @@ export default function OverviewScreen({ navigation }: any) {
 
   const loadData = async () => {
     try {
-      const [today, weekly] = await Promise.all([
+      const [today, weekly, food] = await Promise.all([
         healthAPI.getToday(),
         healthAPI.getWeekly(),
+        foodAPI.getLogs().catch(() => ({ foodLogs: [], totals: null })),
       ]);
       setHealthData(today);
       setWeeklyData(weekly);
+      setFoodLogs(food.foodLogs || []);
+      setFoodTotals(food.totals || null);
       // Load any existing AI insights from today's data
       if (today?.analyzedSymptoms?.length > 0) {
         setAiInsights(today.analyzedSymptoms);
@@ -441,6 +446,81 @@ const getEnergyState = (score: number | null): EnergyState => {
                 </Text>
               )}
             </View>
+          </View>
+
+          {/* Today's Food Log */}
+          <View style={styles.stripCard}>
+            <View style={styles.cardHeaderRow}>
+              <Text style={styles.cardTitle}>Today's Food</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Food')}>
+                <Text style={styles.linkText}>+ Add</Text>
+              </TouchableOpacity>
+            </View>
+            {foodLogs.length > 0 ? (
+              <>
+                <View style={styles.foodTotalsRow}>
+                  <View style={styles.foodTotalItem}>
+                    <Text style={styles.foodTotalValue}>{foodTotals?.calories || 0}</Text>
+                    <Text style={styles.foodTotalLabel}>cal</Text>
+                  </View>
+                  <View style={styles.foodTotalItem}>
+                    <Text style={styles.foodTotalValue}>{foodTotals?.protein || 0}g</Text>
+                    <Text style={styles.foodTotalLabel}>protein</Text>
+                  </View>
+                  <View style={styles.foodTotalItem}>
+                    <Text style={styles.foodTotalValue}>{foodTotals?.carbs || 0}g</Text>
+                    <Text style={styles.foodTotalLabel}>carbs</Text>
+                  </View>
+                  <View style={styles.foodTotalItem}>
+                    <Text style={styles.foodTotalValue}>{foodTotals?.fat || 0}g</Text>
+                    <Text style={styles.foodTotalLabel}>fat</Text>
+                  </View>
+                </View>
+                <View style={styles.foodLogsList}>
+                  {foodLogs.slice(0, 5).map((log: any) => (
+                    <View key={log.id} style={styles.foodLogItem}>
+                      <View style={styles.foodLogIcon}>
+                        <Ionicons 
+                          name={
+                            log.mealType === 'BREAKFAST' ? 'sunny-outline' :
+                            log.mealType === 'LUNCH' ? 'partly-sunny-outline' :
+                            log.mealType === 'DINNER' ? 'moon-outline' :
+                            'cafe-outline'
+                          } 
+                          size={16} 
+                          color={colors.primary} 
+                        />
+                      </View>
+                      <View style={styles.foodLogContent}>
+                        <Text style={styles.foodLogDescription} numberOfLines={1}>
+                          {log.description}
+                        </Text>
+                        <Text style={styles.foodLogMeta}>
+                          {log.calories} cal • {log.mealType?.toLowerCase()}
+                        </Text>
+                      </View>
+                    </View>
+                  ))}
+                  {foodLogs.length > 5 && (
+                    <Text style={styles.mutedText}>
+                      +{foodLogs.length - 5} more items
+                    </Text>
+                  )}
+                </View>
+              </>
+            ) : (
+              <View style={styles.emptyFoodState}>
+                <Ionicons name="restaurant-outline" size={32} color={colors.textLight} />
+                <Text style={styles.mutedText}>No food logged today</Text>
+                <TouchableOpacity 
+                  style={styles.scanFoodButton}
+                  onPress={() => navigation.navigate('Food')}
+                >
+                  <Ionicons name="camera-outline" size={16} color="#fff" />
+                  <Text style={styles.scanFoodButtonText}>Scan Food</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
 
           <View style={styles.fullCard}>
@@ -1226,5 +1306,77 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 14,
     fontWeight: '700',
+  },
+  // Food section styles
+  foodTotalsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  foodTotalItem: {
+    alignItems: 'center',
+  },
+  foodTotalValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  foodTotalLabel: {
+    fontSize: 11,
+    color: colors.textLight,
+    marginTop: 2,
+  },
+  foodLogsList: {
+    gap: spacing.sm,
+  },
+  foodLogItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  foodLogIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: `${colors.primary}15`,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  foodLogContent: {
+    flex: 1,
+  },
+  foodLogDescription: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.text,
+  },
+  foodLogMeta: {
+    fontSize: 12,
+    color: colors.textLight,
+    marginTop: 2,
+  },
+  emptyFoodState: {
+    alignItems: 'center',
+    paddingVertical: spacing.lg,
+    gap: spacing.sm,
+  },
+  scanFoodButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
+    marginTop: spacing.sm,
+  },
+  scanFoodButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
