@@ -457,7 +457,7 @@ const getEnergyState = (score: number | null): EnergyState => {
               </TouchableOpacity>
             </View>
             
-            {/* Calorie Goal Tracker */}
+            {/* Calorie Goal Tracker - Simple */}
             {(() => {
               const calorieGoal = healthData?.calorieGoal || 2000;
               const consumed = foodTotals?.calories || 0;
@@ -467,26 +467,15 @@ const getEnergyState = (score: number | null): EnergyState => {
               
               return (
                 <View style={styles.calorieTracker}>
-                  <View style={styles.calorieHeader}>
-                    <View>
-                      <Text style={styles.calorieConsumed}>{consumed}</Text>
-                      <Text style={styles.calorieSubLabel}>consumed</Text>
-                    </View>
-                    <View style={styles.calorieGoalBox}>
-                      <Text style={[
-                        styles.calorieRemaining,
-                        isOverBudget && styles.calorieOver
-                      ]}>
-                        {isOverBudget ? '+' : ''}{Math.abs(remaining)}
-                      </Text>
-                      <Text style={styles.calorieSubLabel}>
-                        {isOverBudget ? 'over' : 'remaining'}
-                      </Text>
-                    </View>
-                    <View>
-                      <Text style={styles.calorieGoalValue}>{calorieGoal}</Text>
-                      <Text style={styles.calorieSubLabel}>goal</Text>
-                    </View>
+                  <View style={styles.calorieSimpleRow}>
+                    <Text style={styles.calorieMainText}>
+                      {isOverBudget ? (
+                        <Text style={styles.calorieOver}>{Math.abs(remaining)} over limit</Text>
+                      ) : (
+                        <><Text style={styles.calorieHighlight}>{remaining}</Text> cal left</>
+                      )}
+                    </Text>
+                    <Text style={styles.calorieOfGoal}>{consumed} / {calorieGoal}</Text>
                   </View>
                   <View style={styles.calorieProgressBg}>
                     <LinearGradient
@@ -1347,52 +1336,44 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
-  // Calorie tracker styles
+  // Calorie tracker styles - Simple
   calorieTracker: {
     marginBottom: spacing.md,
   },
-  calorieHeader: {
+  calorieSimpleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'baseline',
     marginBottom: spacing.sm,
   },
-  calorieConsumed: {
-    fontSize: 28,
+  calorieMainText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  calorieHighlight: {
+    fontSize: 24,
     fontWeight: '700',
     color: colors.primary,
   },
-  calorieGoalBox: {
-    alignItems: 'center',
-  },
-  calorieRemaining: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.success,
-  },
   calorieOver: {
+    fontSize: 18,
+    fontWeight: '600',
     color: '#ef4444',
   },
-  calorieGoalValue: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    textAlign: 'right',
-  },
-  calorieSubLabel: {
-    fontSize: 11,
+  calorieOfGoal: {
+    fontSize: 14,
     color: colors.textLight,
-    marginTop: 2,
   },
   calorieProgressBg: {
-    height: 8,
+    height: 10,
     backgroundColor: colors.background,
-    borderRadius: 4,
+    borderRadius: 5,
     overflow: 'hidden',
   },
   calorieProgressFill: {
     height: '100%',
-    borderRadius: 4,
+    borderRadius: 5,
   },
   // Food section styles
   foodTotalsRow: {

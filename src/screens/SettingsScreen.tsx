@@ -368,15 +368,23 @@ export default function SettingsScreen({ navigation }: any) {
               </View>
               
               {syncStatus === 'disconnected' && (
-              <TouchableOpacity
-                  style={styles.connectButton}
-                  onPress={handleConnectHealth}
-                  disabled={!healthAvailable}
-                >
-                  <Text style={[styles.connectButtonText, !healthAvailable && { opacity: 0.5 }]}>
-                    {healthAvailable ? 'Connect' : 'Not Available'}
-                  </Text>
-                </TouchableOpacity>
+                healthAvailable ? (
+                  <TouchableOpacity
+                    style={styles.connectButton}
+                    onPress={handleConnectHealth}
+                  >
+                    <Text style={styles.connectButtonText}>Connect</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <View style={styles.notAvailableContainer}>
+                    <Text style={styles.notAvailableText}>Requires Dev Build</Text>
+                    <Text style={styles.notAvailableHint}>
+                      {Platform.OS === 'ios' 
+                        ? 'HealthKit needs a native build. Run: npx expo run:ios' 
+                        : 'Install Health Connect from Play Store'}
+                    </Text>
+                  </View>
+                )
               )}
 
               {syncStatus === 'connecting' && (
@@ -1003,5 +1011,20 @@ const styles = StyleSheet.create({
   },
   bottomSpacer: {
     height: 48,
+  },
+  notAvailableContainer: {
+    alignItems: 'flex-end',
+  },
+  notAvailableText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.warning,
+  },
+  notAvailableHint: {
+    fontSize: 11,
+    color: colors.textLight,
+    marginTop: 2,
+    textAlign: 'right',
+    maxWidth: 180,
   },
 });

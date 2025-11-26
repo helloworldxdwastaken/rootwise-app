@@ -34,9 +34,11 @@ const getHealthKit = () => {
   if (Platform.OS !== 'ios') return null;
   if (!AppleHealthKit) {
     try {
-      AppleHealthKit = require('react-native-health').default;
+      const healthModule = require('react-native-health');
+      AppleHealthKit = healthModule.default || healthModule;
+      console.log('HealthKit module loaded:', !!AppleHealthKit);
     } catch (error) {
-      console.log('HealthKit not available:', error);
+      console.log('HealthKit not available - this is normal in Expo Go. Use a development build for HealthKit:', error);
       return null;
     }
   }
@@ -106,15 +108,33 @@ export const initializeHealthKit = async (): Promise<HealthPermissionStatus> => 
  * Check if HealthKit is available on this device
  */
 export const isHealthKitAvailable = async (): Promise<boolean> => {
-  if (Platform.OS !== 'ios') return false;
+  if (Platform.OS !== 'ios') {
+    console.log('HealthKit: Not iOS platform');
+    return false;
+  }
 
   const HealthKit = getHealthKit();
-  if (!HealthKit) return false;
+  if (!HealthKit) {
+    console.log('HealthKit: Module not loaded - requires development build, not Expo Go');
+    return false;
+  }
 
   return new Promise((resolve) => {
-    HealthKit.isAvailable((error: any, available: boolean) => {
-      resolve(!error && available);
-    });
+    try {
+      if (typeof HealthKit.isAvailable === 'function') {
+        HealthKit.isAvailable((error: any, available: boolean) => {
+          console.log('HealthKit.isAvailable result:', { error, available });
+          resolve(!error && available);
+        });
+      } else {
+        // Some versions don't have isAvailable, try to init directly
+        console.log('HealthKit: isAvailable not found, assuming available');
+        resolve(true);
+      }
+    } catch (error) {
+      console.log('HealthKit availability check error:', error);
+      resolve(false);
+    }
   });
 };
 
