@@ -88,19 +88,52 @@ jobs:
           cd ios
           pod install --repo-update --verbose
 
-      - name: Fix lottie-react-native Swift settings for Xcode 16
+      - name: Fix lottie-react-native Swift settings for Xcode 16 using xcodeproj
         run: |
           cd ios
-          echo "📝 Checking if lottie patch actually worked..."
+          echo "📝 Fixing lottie-react-native Swift settings using xcodeproj gem..."
           
-          # Check if SWIFT_VERSION is set for lottie targets
-          if grep -A 50 "lottie-react-native" Pods/Pods.xcodeproj/project.pbxproj | grep "SWIFT_VERSION"; then
-            echo "✅ SWIFT_VERSION found in project for lottie"
+          # Install xcodeproj gem if not present
+          gem install xcodeproj
+          
+          # Use Ruby with xcodeproj to properly modify the project
+          ruby << 'RUBY'
+          require 'xcodeproj'
+          
+          project_path = 'Pods/Pods.xcodeproj'
+          project = Xcodeproj::Project.open(project_path)
+          
+          modified = false
+          
+          project.targets.each do |target|
+            if target.name == 'lottie-react-native' || target.name == 'lottie-ios'
+              puts "Configuring target: #{target.name}"
+              
+              target.build_configurations.each do |config|
+                # Set SWIFT_VERSION
+                config.build_settings['SWIFT_VERSION'] = '5.0'
+                config.build_settings['CLANG_ENABLE_MODULES'] = 'YES'
+                
+                # Ensure minimum deployment target
+                if config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'].to_f < 13.0
+                  config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
+                end
+                
+                puts "  #{config.name}: SWIFT_VERSION = 5.0"
+                modified = true
+              end
+            end
+          end
+          
+          if modified
+            project.save
+            puts "✅ Successfully patched lottie targets"
           else
-            echo "❌ SWIFT_VERSION NOT found - patch may have failed"
-            echo "Showing lottie-react-native config:"
-            grep -A 20 "lottie-react-native" Pods/Pods.xcodeproj/project.pbxproj | head -30
-          fi
+            puts "⚠️ No lottie targets found to patch"
+          end
+          RUBY
+          
+          echo "Patch complete!"
 
       - name: Build iOS app (Unsigned)
         run: |

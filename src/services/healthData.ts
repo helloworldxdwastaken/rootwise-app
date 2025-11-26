@@ -401,11 +401,22 @@ export const initializeHealthConnect = async (): Promise<HealthPermissionStatus>
   try {
     // Check if Health Connect is available
     const isAvailable = await HC.getSdkStatus();
+    console.log('Health Connect SDK status:', isAvailable);
+    
     if (isAvailable !== HC.SdkAvailabilityStatus.SDK_AVAILABLE) {
+      // Provide helpful message based on SDK status
+      let message = 'Health Connect not available';
+      
+      if (isAvailable === HC.SdkAvailabilityStatus.SDK_UNAVAILABLE) {
+        message = 'Please install Google Health Connect from the Play Store';
+      } else if (isAvailable === HC.SdkAvailabilityStatus.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED) {
+        message = 'Please update Google Health Connect in the Play Store';
+      }
+      
       return {
         authorized: false,
         shouldRequest: false,
-        deniedPermissions: ['Health Connect not installed'],
+        deniedPermissions: [message],
       };
     }
 

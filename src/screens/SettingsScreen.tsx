@@ -9,6 +9,7 @@ import {
   Alert,
   Platform,
   Image,
+  Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -97,10 +98,34 @@ export default function SettingsScreen({ navigation }: any) {
         );
       } else {
         setSyncStatus('error');
-        Alert.alert(
-          'Not Available',
-          `${getHealthPlatformName()} is not available on this device. ${result.deniedPermissions.join(', ')}`,
-        );
+        const errorMsg = result.deniedPermissions.join(', ');
+        
+        // Check if Health Connect needs to be installed
+        if (Platform.OS === 'android' && errorMsg.includes('install')) {
+          Alert.alert(
+            'Health Connect Required',
+            'Please install Google Health Connect from the Play Store to sync your health data.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { 
+                text: 'Open Play Store', 
+                onPress: () => {
+                  // Open Play Store to Health Connect
+                  const url = 'market://details?id=com.google.android.apps.healthdata';
+                  Linking.openURL(url).catch(() => {
+                    // Fallback to web URL
+                    Linking.openURL('https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata');
+                  });
+                }
+              },
+            ]
+          );
+        } else {
+          Alert.alert(
+            'Not Available',
+            `${getHealthPlatformName()} is not available on this device. ${errorMsg}`,
+          );
+        }
       }
     } catch (error: any) {
       console.error('Health connect error:', error);
