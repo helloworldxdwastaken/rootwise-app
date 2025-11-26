@@ -409,10 +409,11 @@ export const initializeHealthConnect = async (): Promise<HealthPermissionStatus>
       };
     }
 
-    // Initialize the SDK
+    // Initialize the SDK first
+    console.log('Initializing Health Connect SDK...');
     await HC.initialize();
 
-    // Request permissions
+    // Request permissions with additional error handling for lateinit crash
     const permissions = [
       { accessType: 'read', recordType: 'Steps' },
       { accessType: 'read', recordType: 'SleepSession' },
@@ -424,23 +425,45 @@ export const initializeHealthConnect = async (): Promise<HealthPermissionStatus>
       { accessType: 'write', recordType: 'Weight' },
     ];
 
-    const granted = await HC.requestPermission(permissions);
-    
-    const deniedPerms = permissions
-      .filter((p) => !granted.some((g: any) => g.recordType === p.recordType && g.accessType === p.accessType))
-      .map((p) => `${p.accessType}:${p.recordType}`);
+    console.log('Requesting Health Connect permissions...');
+    try {
+      const granted = await HC.requestPermission(permissions);
+      
+      const deniedPerms = permissions
+        .filter((p) => !granted.some((g: any) => g.recordType === p.recordType && g.accessType === p.accessType))
+        .map((p) => `${p.accessType}:${p.recordType}`);
 
-    return {
-      authorized: deniedPerms.length === 0,
-      shouldRequest: deniedPerms.length > 0,
-      deniedPermissions: deniedPerms,
-    };
+      return {
+        authorized: deniedPerms.length === 0,
+        shouldRequest: deniedPerms.length > 0,
+        deniedPermissions: deniedPerms,
+      };
+    } catch (permError: any) {
+      // Handle the "lateinit property requestPermission has not been initialized" crash
+      if (permError.message?.includes('lateinit') || permError.message?.includes('requestPermission')) {
+        console.error('Health Connect permission delegate not properly initialized.');
+        console.log('This may require rebuilding the app after running: npx expo prebuild --clean');
+        return {
+          authorized: false,
+          shouldRequest: false,
+          deniedPermissions: ['Health Connect setup incomplete - rebuild required'],
+        };
+      }
+      throw permError;
+    }
   } catch (error: any) {
     console.error('Health Connect init error:', error);
+    
+    // Provide more specific error messages
+    let errorMessage = error.message || 'Unknown error';
+    if (error.message?.includes('lateinit')) {
+      errorMessage = 'Health Connect not properly configured. Please rebuild the app.';
+    }
+    
     return {
       authorized: false,
       shouldRequest: true,
-      deniedPermissions: [error.message || 'Unknown error'],
+      deniedPermissions: [errorMessage],
     };
   }
 };

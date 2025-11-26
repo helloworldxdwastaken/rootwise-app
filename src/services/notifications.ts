@@ -25,15 +25,26 @@ export async function requestNotificationPermissions() {
       });
     }
 
-    const projectId =
-      Constants.expoConfig?.extra?.eas?.projectId || Constants.easConfig?.projectId;
-    const tokenResponse = await Notifications.getExpoPushTokenAsync(
-      projectId ? { projectId } : undefined
-    );
+    // Try to get Expo push token, but handle Firebase/FCM not being configured
+    try {
+      const projectId =
+        Constants.expoConfig?.extra?.eas?.projectId || Constants.easConfig?.projectId;
+      const tokenResponse = await Notifications.getExpoPushTokenAsync(
+        projectId ? { projectId } : undefined
+      );
 
-    const token = tokenResponse.data;
-    console.log('Expo push token:', token);
-    return token;
+      const token = tokenResponse.data;
+      console.log('Expo push token:', token);
+      return token;
+    } catch (tokenError: any) {
+      // Firebase/FCM not configured - log but don't crash
+      if (Platform.OS === 'android' && tokenError.message?.includes('FirebaseApp')) {
+        console.log('Push notifications require Firebase setup on Android. Skipping token registration.');
+        console.log('See: https://docs.expo.dev/push-notifications/fcm-credentials/');
+        return null;
+      }
+      throw tokenError;
+    }
   } catch (error) {
     console.error('Failed to request notification permissions:', error);
     return null;

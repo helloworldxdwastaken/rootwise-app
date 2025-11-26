@@ -20,6 +20,9 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Select Xcode 15.4
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
+
       - name: Clean and install dependencies
         run: |
           rm -rf node_modules
@@ -54,6 +57,38 @@ jobs:
           fi
           
           echo "✅ react-native-reanimated removal complete"
+
+      - name: Patch Podfile for lottie-react-native and Xcode 15 compatibility
+        run: |
+          cd ios
+          echo "📝 Patching Podfile for lottie-react-native and Xcode 15 compatibility..."
+          
+          # Check if already patched
+          if grep -q "lottie Swift Xcode fix" Podfile; then
+            echo "✓ Podfile already patched"
+          else
+            # Append post_install hook to fix lottie-react-native Swift compilation
+            echo "" >> Podfile
+            echo "# Fix for lottie Swift Xcode fix" >> Podfile
+            echo "post_install do |installer|" >> Podfile
+            echo "  installer.pods_project.targets.each do |target|" >> Podfile
+            echo "    target.build_configurations.each do |config|" >> Podfile
+            echo "      if config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'].to_f < 13.0" >> Podfile
+            echo "        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'" >> Podfile
+            echo "      end" >> Podfile
+            echo "      if target.name == 'lottie-react-native' || target.name == 'lottie-ios'" >> Podfile
+            echo "        config.build_settings['SWIFT_VERSION'] = '5.0'" >> Podfile
+            echo "        config.build_settings['CLANG_ENABLE_MODULES'] = 'YES'" >> Podfile
+            echo "      end" >> Podfile
+            echo "    end" >> Podfile
+            echo "  end" >> Podfile
+            echo "end" >> Podfile
+            echo "✅ Podfile patched successfully"
+          fi
+          
+          echo ""
+          echo "📄 Updated Podfile (last 20 lines):"
+          tail -20 Podfile
 
       - name: Clean CocoaPods and build caches
         run: |
