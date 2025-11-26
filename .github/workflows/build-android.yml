@@ -63,6 +63,24 @@ jobs:
           
           echo "✅ react-native-reanimated removal complete"
 
+      - name: Ensure minSdkVersion is 26 (required by Health Connect)
+        run: |
+          echo "📝 Patching android/app/build.gradle to ensure minSdkVersion = 26..."
+          
+          if [ -f "android/app/build.gradle" ]; then
+            # Replace any minSdkVersion line with 26
+            sed -i 's/minSdkVersion.*/minSdkVersion 26/' android/app/build.gradle
+            
+            # Verify the change
+            echo "Checking minSdkVersion in build.gradle:"
+            grep -i "minSdkVersion" android/app/build.gradle || echo "minSdkVersion not found"
+          fi
+          
+          # Also set it in gradle.properties as a fallback
+          echo "minSdkVersion=26" >> android/gradle.properties
+          
+          echo "✅ minSdkVersion set to 26"
+
       - name: Fix hermesEnabled property in build.gradle
         run: |
           if [ -f android/app/build.gradle ]; then
