@@ -328,7 +328,7 @@ export default function FoodScannerScreen() {
             <View style={styles.heroSection}>
               <Animated.View style={[styles.heroIconContainer, { transform: [{ translateY: floatAnim }] }]}>
                 <LinearGradient
-                  colors={['#FF6B6B', '#FF8E53', '#FFA726']}
+                  colors={[colors.primary, '#1a5c45', colors.primaryLight]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={styles.heroIconGradient}
@@ -336,10 +336,10 @@ export default function FoodScannerScreen() {
                   <Ionicons name="restaurant" size={56} color="#fff" />
                 </LinearGradient>
                 <View style={styles.sparkle1}>
-                  <Ionicons name="sparkles" size={20} color="#FFD700" />
+                  <Ionicons name="sparkles" size={20} color={colors.accent} />
                 </View>
                 <View style={styles.sparkle2}>
-                  <Ionicons name="sparkles" size={16} color="#FF6B6B" />
+                  <Ionicons name="sparkles" size={16} color={colors.primaryLight} />
                 </View>
               </Animated.View>
               
@@ -351,15 +351,15 @@ export default function FoodScannerScreen() {
               {/* Feature Pills */}
               <View style={styles.featurePills}>
                 <View style={styles.featurePill}>
-                  <Ionicons name="flash" size={14} color="#FF6B6B" />
+                  <Ionicons name="flash" size={14} color={colors.accent} />
                   <Text style={styles.featurePillText}>Instant</Text>
                 </View>
                 <View style={styles.featurePill}>
-                  <Ionicons name="analytics" size={14} color="#4CAF50" />
+                  <Ionicons name="analytics" size={14} color={colors.primary} />
                   <Text style={styles.featurePillText}>Accurate</Text>
                 </View>
                 <View style={styles.featurePill}>
-                  <Ionicons name="leaf" size={14} color="#2196F3" />
+                  <Ionicons name="leaf" size={14} color={colors.primaryLight} />
                   <Text style={styles.featurePillText}>Smart</Text>
                 </View>
               </View>
@@ -374,7 +374,7 @@ export default function FoodScannerScreen() {
                 activeOpacity={0.9}
               >
                 <LinearGradient
-                  colors={[colors.primary, '#6B4BDB']}
+                  colors={[colors.primary, '#1a5c45']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={styles.primaryCardGradient}
@@ -752,7 +752,7 @@ const styles = StyleSheet.create({
     borderRadius: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#FF6B6B',
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.35,
     shadowRadius: 20,
