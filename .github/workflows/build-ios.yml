@@ -84,28 +84,57 @@ jobs:
           if grep -q "lottie Swift Xcode fix" Podfile; then
             echo "✓ Podfile already patched"
           else
-            # Append post_install hook to fix lottie-react-native Swift compilation
-            echo "" >> Podfile
-            echo "# Fix for lottie Swift Xcode fix" >> Podfile
-            echo "post_install do |installer|" >> Podfile
-            echo "  installer.pods_project.targets.each do |target|" >> Podfile
-            echo "    target.build_configurations.each do |config|" >> Podfile
-            echo "      if config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'].to_f < 13.0" >> Podfile
-            echo "        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'" >> Podfile
-            echo "      end" >> Podfile
-            echo "      if target.name == 'lottie-react-native' || target.name == 'lottie-ios'" >> Podfile
-            echo "        config.build_settings['SWIFT_VERSION'] = '5.0'" >> Podfile
-            echo "        config.build_settings['CLANG_ENABLE_MODULES'] = 'YES'" >> Podfile
-            echo "      end" >> Podfile
-            echo "    end" >> Podfile
-            echo "  end" >> Podfile
-            echo "end" >> Podfile
-            echo "✅ Podfile patched successfully"
+            # Create Ruby script to merge with existing post_install hook
+            cat > patch_podfile.rb << 'RUBY'
+          podfile = File.read('Podfile')
+          
+          # Code to inject into post_install
+          lottie_fix = <<-CODE
+            
+            # Fix for lottie Swift Xcode fix
+            installer.pods_project.targets.each do |target|
+              target.build_configurations.each do |config|
+                if config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'].to_f < 13.0
+                  config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
+                end
+                if target.name == 'lottie-react-native' || target.name == 'lottie-ios'
+                  config.build_settings['SWIFT_VERSION'] = '5.0'
+                  config.build_settings['CLANG_ENABLE_MODULES'] = 'YES'
+                end
+              end
+            end
+          CODE
+          
+          # Find the existing post_install hook and inject our code before the final 'end'
+          if podfile =~ /post_install do \|installer\|/
+            puts "Found existing post_install hook, merging..."
+            
+            # Find the last 'end' statement in the file and inject before it
+            lines = podfile.lines
+            last_end_index = lines.rindex { |line| line.strip == 'end' }
+            
+            if last_end_index
+              lines.insert(last_end_index, lottie_fix)
+              File.write('Podfile', lines.join)
+              puts "✅ Successfully merged lottie fix into existing post_install"
+            else
+              puts "⚠️ Could not find end statement"
+            end
+          else
+            puts "No post_install found, adding new one..."
+            podfile += "\n\npost_install do |installer|#{lottie_fix}\nend\n"
+            File.write('Podfile', podfile)
+            puts "✅ Added new post_install hook"
+          end
+          RUBY
+            
+            ruby patch_podfile.rb
+            rm patch_podfile.rb
           fi
           
           echo ""
-          echo "📄 Updated Podfile (last 20 lines):"
-          tail -20 Podfile
+          echo "📄 Updated Podfile (last 30 lines):"
+          tail -30 Podfile
 
       - name: Clean CocoaPods and build caches
         run: |
