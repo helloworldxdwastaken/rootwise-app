@@ -37,84 +37,6 @@ jobs:
       - name: Prebuild iOS native project
         run: npx expo prebuild --platform ios --clean
 
-      - name: Patch Podfile for lottie-react-native Xcode 16 compatibility
-        run: |
-          cd ios
-          echo "Patching Podfile for lottie-react-native..."
-          
-          # Create the lottie fix as a separate file
-          cat > /tmp/lottie_fix.rb << 'EOF'
-          # Fix lottie-react-native Swift compilation for Xcode 16
-          installer.pods_project.targets.each do |target|
-            if target.name == "lottie-react-native" || target.name == "lottie-ios"
-              target.build_configurations.each do |config|
-                config.build_settings["SWIFT_VERSION"] = "5.0"
-                config.build_settings["CLANG_ENABLE_MODULES"] = "YES"
-                config.build_settings["BUILD_LIBRARY_FOR_DISTRIBUTION"] = "NO"
-              end
-            end
-          end
-          EOF
-          
-          # Check if post_install block exists and inject the fix
-          if grep -q "post_install do |installer|" Podfile; then
-            echo "Found existing post_install block"
-            # Use sed to inject before the closing 'end' of post_install
-            # Find line number of post_install, then find its closing end
-            LOTTIE_CODE=$(cat /tmp/lottie_fix.rb)
-            
-            # Create a Python script to do the injection properly
-            python3 << 'PYTHON_SCRIPT'
-          import re
-          
-          with open('Podfile', 'r') as f:
-              content = f.read()
-          
-          lottie_fix = '''
-            # Fix lottie-react-native Swift compilation for Xcode 16
-            installer.pods_project.targets.each do |target|
-              if target.name == "lottie-react-native" || target.name == "lottie-ios"
-                target.build_configurations.each do |config|
-                  config.build_settings["SWIFT_VERSION"] = "5.0"
-                  config.build_settings["CLANG_ENABLE_MODULES"] = "YES"
-                  config.build_settings["BUILD_LIBRARY_FOR_DISTRIBUTION"] = "NO"
-                end
-              end
-            end
-          '''
-          
-          # Find post_install block and inject before its end
-          pattern = r'(post_install do \|installer\|.*?)(^end)'
-          
-          def replacer(match):
-              return match.group(1) + lottie_fix + '\n' + match.group(2)
-          
-          new_content = re.sub(pattern, replacer, content, flags=re.MULTILINE | re.DOTALL)
-          
-          with open('Podfile', 'w') as f:
-              f.write(new_content)
-          
-          print("Lottie fix injected into existing post_install block")
-          PYTHON_SCRIPT
-          else
-            echo "Adding new post_install block..."
-            echo '' >> Podfile
-            echo 'post_install do |installer|' >> Podfile
-            echo '  installer.pods_project.targets.each do |target|' >> Podfile
-            echo '    if target.name == "lottie-react-native" || target.name == "lottie-ios"' >> Podfile
-            echo '      target.build_configurations.each do |config|' >> Podfile
-            echo '        config.build_settings["SWIFT_VERSION"] = "5.0"' >> Podfile
-            echo '        config.build_settings["CLANG_ENABLE_MODULES"] = "YES"' >> Podfile
-            echo '        config.build_settings["BUILD_LIBRARY_FOR_DISTRIBUTION"] = "NO"' >> Podfile
-            echo '      end' >> Podfile
-            echo '    end' >> Podfile
-            echo '  end' >> Podfile
-            echo 'end' >> Podfile
-          fi
-          
-          echo "Podfile patched. Last 30 lines:"
-          tail -30 Podfile
-
       - name: Clean CocoaPods caches
         run: |
           cd ios
@@ -125,6 +47,47 @@ jobs:
         run: |
           cd ios
           pod install --repo-update
+
+      - name: Patch lottie-react-native Swift settings in Pods project
+        run: |
+          cd ios
+          echo "Patching lottie-react-native Swift settings using xcodeproj gem..."
+          
+          gem install xcodeproj
+          
+          ruby << 'RUBY_EOF'
+          require 'xcodeproj'
+          
+          project_path = 'Pods/Pods.xcodeproj'
+          project = Xcodeproj::Project.open(project_path)
+          
+          lottie_targets = ['lottie-react-native', 'lottie-ios', 'Lottie']
+          modified = false
+          
+          project.targets.each do |target|
+            if lottie_targets.any? { |name| target.name.include?(name) }
+              puts "Patching target: #{target.name}"
+              target.build_configurations.each do |config|
+                config.build_settings['SWIFT_VERSION'] = '5.0'
+                config.build_settings['CLANG_ENABLE_MODULES'] = 'YES'
+                config.build_settings['BUILD_LIBRARY_FOR_DISTRIBUTION'] = 'NO'
+                puts "  - #{config.name}: SWIFT_VERSION=5.0"
+                modified = true
+              end
+            end
+          end
+          
+          if modified
+            project.save
+            puts "Successfully patched lottie targets!"
+          else
+            puts "Warning: No lottie targets found to patch"
+            puts "Available targets:"
+            project.targets.each { |t| puts "  - #{t.name}" }
+          end
+          RUBY_EOF
+          
+          echo "Patch complete!"
 
       - name: Build iOS app (Unsigned)
         run: |
