@@ -884,6 +884,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     borderWidth: 1,
     borderColor: colors.glassBorder,
+    marginBottom: spacing.sm,
   },
   emptyTitle: {
     fontSize: 16,
@@ -898,6 +899,7 @@ const styles = StyleSheet.create({
   },
   conditionsList: {
     gap: spacing.md,
+    marginBottom: spacing.sm,
   },
   conditionCard: {
     backgroundColor: '#D1FAE5',
@@ -975,6 +977,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#FCD34D',
     alignItems: 'flex-start',
+    marginTop: spacing.lg,
   },
   warningIcon: {
     marginRight: spacing.sm,
