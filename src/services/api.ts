@@ -209,6 +209,19 @@ export const foodAPI = {
     }
   },
 
+  // Estimate nutrition from text description using AI
+  estimateFromText: async (description: string, mealType?: string) => {
+    try {
+      console.log('Estimating nutrition for:', description);
+      const response = await api.post('/food/estimate', { description, mealType });
+      console.log('Estimation response:', JSON.stringify(response.data, null, 2));
+      return response.data;
+    } catch (error: any) {
+      console.error('Food estimation error:', error.response?.data || error.message);
+      throw error;
+    }
+  },
+
   log: async (data: {
     description: string;
     calories: number;

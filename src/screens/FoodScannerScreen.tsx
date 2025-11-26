@@ -57,6 +57,8 @@ export default function FoodScannerScreen() {
   const [manualProtein, setManualProtein] = useState('');
   const [manualCarbs, setManualCarbs] = useState('');
   const [manualFat, setManualFat] = useState('');
+  const [isEstimated, setIsEstimated] = useState(false);
+  const [estimating, setEstimating] = useState(false);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const floatAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
@@ -266,6 +268,36 @@ export default function FoodScannerScreen() {
     setManualProtein('');
     setManualCarbs('');
     setManualFat('');
+    setIsEstimated(false);
+  };
+
+  // AI estimation from text description
+  const estimateNutrition = async () => {
+    if (!manualFood.trim()) {
+      Alert.alert('Enter Food First', 'Please describe what you ate before estimating.');
+      return;
+    }
+
+    setEstimating(true);
+    try {
+      const result = await foodAPI.estimateFromText(manualFood.trim(), selectedMealType);
+
+      if (result.success && result.estimation) {
+        const est = result.estimation;
+        setManualCalories(est.calories?.toString() || '');
+        setManualProtein(est.protein?.toString() || '');
+        setManualCarbs(est.carbs?.toString() || '');
+        setManualFat(est.fat?.toString() || '');
+        setIsEstimated(true);
+      } else {
+        Alert.alert('Could Not Estimate', result.message || 'Try being more specific about what you ate.');
+      }
+    } catch (error: any) {
+      console.error('Estimation error:', error);
+      Alert.alert('Estimation Failed', 'Could not estimate nutrition. Please enter values manually.');
+    } finally {
+      setEstimating(false);
+    }
   };
 
   const logManualFood = async () => {
@@ -274,24 +306,66 @@ export default function FoodScannerScreen() {
       return;
     }
 
-    const calories = parseInt(manualCalories) || 0;
+    let calories = parseInt(manualCalories) || 0;
+    
+    // If no calories entered, try to estimate first
     if (calories <= 0) {
-      Alert.alert('Missing Info', 'Please enter estimated calories.');
-      return;
+      setEstimating(true);
+      try {
+        const result = await foodAPI.estimateFromText(manualFood.trim(), selectedMealType);
+        if (result.success && result.estimation?.calories) {
+          const est = result.estimation;
+          calories = est.calories;
+          setManualCalories(est.calories?.toString() || '');
+          setManualProtein(est.protein?.toString() || '');
+          setManualCarbs(est.carbs?.toString() || '');
+          setManualFat(est.fat?.toString() || '');
+          setIsEstimated(true);
+          setEstimating(false);
+          
+          // Show confirmation with estimated values
+          Alert.alert(
+            'AI Estimated ≈',
+            `Based on "${manualFood.trim()}":\n\n` +
+            `≈ ${est.calories} calories\n` +
+            `≈ ${est.protein}g protein\n` +
+            `≈ ${est.carbs}g carbs\n` +
+            `≈ ${est.fat}g fat\n\n` +
+            `Log this meal?`,
+            [
+              { text: 'Edit First', style: 'cancel' },
+              { text: 'Log It', onPress: () => saveFood(est.calories, est.protein, est.carbs, est.fat, true) },
+            ]
+          );
+          return;
+        } else {
+          setEstimating(false);
+          Alert.alert('Enter Calories', 'Could not estimate automatically. Please enter calories manually.');
+          return;
+        }
+      } catch (error) {
+        setEstimating(false);
+        Alert.alert('Enter Calories', 'Please enter estimated calories.');
+        return;
+      }
     }
 
+    await saveFood(calories, parseInt(manualProtein) || 0, parseInt(manualCarbs) || 0, parseInt(manualFat) || 0, isEstimated);
+  };
+
+  const saveFood = async (calories: number, protein: number, carbs: number, fat: number, estimated: boolean) => {
     setSaving(true);
     try {
       const result = await foodAPI.log({
         description: manualFood.trim(),
         calories,
-        protein: parseInt(manualProtein) || 0,
-        carbs: parseInt(manualCarbs) || 0,
-        fat: parseInt(manualFat) || 0,
+        protein,
+        carbs,
+        fat,
         fiber: null,
         mealType: selectedMealType,
-        portionSize: '1 serving (manual entry)',
-        confidence: 1.0, // User entered it manually
+        portionSize: estimated ? '1 serving (AI estimated)' : '1 serving (manual entry)',
+        confidence: estimated ? 0.8 : 1.0,
       });
 
       console.log('Manual food log response:', JSON.stringify(result, null, 2));
@@ -299,7 +373,7 @@ export default function FoodScannerScreen() {
       if (result.success) {
         Alert.alert(
           'Logged! 🎉',
-          `${calories} calories added to your food log.`,
+          `${estimated ? '≈ ' : ''}${calories} calories added to your food log.`,
           [
             {
               text: 'Log Another',
@@ -566,22 +640,60 @@ export default function FoodScannerScreen() {
               <Text style={styles.inputLabel}>What did you eat?</Text>
               <TextInput
                 style={styles.textInput}
-                placeholder="e.g., Chicken salad with rice"
+                placeholder="e.g., 1 burrito with 4 corn balls"
                 value={manualFood}
-                onChangeText={setManualFood}
+                onChangeText={(text) => {
+                  setManualFood(text);
+                  setIsEstimated(false); // Reset estimation flag when text changes
+                }}
                 multiline
               />
               
-              <Text style={styles.inputLabel}>Estimated Calories *</Text>
+              {/* AI Estimate Button */}
+              <TouchableOpacity
+                style={[styles.estimateButton, estimating && styles.estimateButtonDisabled]}
+                onPress={estimateNutrition}
+                disabled={estimating || !manualFood.trim()}
+              >
+                {estimating ? (
+                  <>
+                    <ActivityIndicator color={colors.primary} size="small" />
+                    <Text style={styles.estimateButtonText}>Analyzing...</Text>
+                  </>
+                ) : (
+                  <>
+                    <Ionicons name="sparkles" size={18} color={colors.primary} />
+                    <Text style={styles.estimateButtonText}>
+                      {isEstimated ? 'Re-estimate with AI' : 'Estimate with AI ✨'}
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+              
+              {isEstimated && (
+                <View style={styles.estimatedBadge}>
+                  <Ionicons name="checkmark-circle" size={14} color={colors.success} />
+                  <Text style={styles.estimatedBadgeText}>AI Estimated (≈ approximate)</Text>
+                </View>
+              )}
+              
+              <Text style={styles.inputLabel}>
+                {isEstimated ? '≈ Calories' : 'Estimated Calories'} {!isEstimated && '*'}
+              </Text>
               <TextInput
-                style={styles.numberInput}
+                style={[styles.numberInput, isEstimated && styles.estimatedInput]}
                 placeholder="e.g., 450"
                 value={manualCalories}
-                onChangeText={setManualCalories}
+                onChangeText={(text) => {
+                  setManualCalories(text);
+                  if (text !== manualCalories) setIsEstimated(false);
+                }}
                 keyboardType="number-pad"
               />
               
-              <Text style={styles.inputLabel}>Macros (optional)</Text>
+              <Text style={styles.inputLabel}>
+                {isEstimated ? '≈ Macros' : 'Macros (optional)'}
+              </Text>
               <View style={styles.macroInputs}>
                 <View style={styles.macroInputGroup}>
                   <Text style={styles.macroLabel}>Protein</Text>
@@ -1267,6 +1379,50 @@ const styles = StyleSheet.create({
   },
   manualLogButton: {
     marginTop: 24,
+  },
+  // AI Estimation styles
+  estimateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: `${colors.primary}10`,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    marginTop: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: `${colors.primary}30`,
+    borderStyle: 'dashed',
+  },
+  estimateButtonDisabled: {
+    opacity: 0.6,
+  },
+  estimateButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  estimatedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: `${colors.success}15`,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+    alignSelf: 'flex-start',
+  },
+  estimatedBadgeText: {
+    fontSize: 12,
+    color: colors.success,
+    fontWeight: '500',
+  },
+  estimatedInput: {
+    backgroundColor: `${colors.success}08`,
+    borderColor: `${colors.success}30`,
   },
 });
 
