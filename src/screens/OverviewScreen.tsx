@@ -282,6 +282,112 @@ const getEnergyState = (score: number | null): EnergyState => {
             )}
           </View>
 
+          {/* Today's Food Log - Moved up for better UX (most checked daily after energy) */}
+          <View style={styles.stripCard}>
+            <View style={styles.cardHeaderRow}>
+              <Text style={styles.cardTitle}>Today's Food</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Food')}>
+                <Text style={styles.linkText}>+ Add</Text>
+              </TouchableOpacity>
+            </View>
+            
+            {/* Calorie Goal Tracker - Simple */}
+            {(() => {
+              const calorieGoal = healthData?.calorieGoal || 2000;
+              const consumed = foodTotals?.calories || 0;
+              const remaining = calorieGoal - consumed;
+              const progress = Math.min((consumed / calorieGoal) * 100, 100);
+              const isOverBudget = remaining < 0;
+              
+              return (
+                <View style={styles.calorieTracker}>
+                  <View style={styles.calorieSimpleRow}>
+                    <Text style={styles.calorieMainText}>
+                      {isOverBudget ? (
+                        <Text style={styles.calorieOver}>{Math.abs(remaining)} over limit</Text>
+                      ) : (
+                        <><Text style={styles.calorieHighlight}>{remaining}</Text> cal left</>
+                      )}
+                    </Text>
+                    <Text style={styles.calorieOfGoal}>{consumed} / {calorieGoal}</Text>
+                  </View>
+                  <View style={styles.calorieProgressBg}>
+                    <LinearGradient
+                      colors={isOverBudget ? ['#f87171', '#ef4444'] : [colors.primary, colors.primaryLight]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={[styles.calorieProgressFill, { width: `${Math.min(progress, 100)}%` }]}
+                    />
+                  </View>
+                </View>
+              );
+            })()}
+
+            {foodLogs.length > 0 ? (
+              <>
+                <View style={styles.foodTotalsRow}>
+                  <View style={styles.foodTotalItem}>
+                    <Text style={styles.foodTotalValue}>{foodTotals?.protein || 0}g</Text>
+                    <Text style={styles.foodTotalLabel}>protein</Text>
+                  </View>
+                  <View style={styles.foodTotalItem}>
+                    <Text style={styles.foodTotalValue}>{foodTotals?.carbs || 0}g</Text>
+                    <Text style={styles.foodTotalLabel}>carbs</Text>
+                  </View>
+                  <View style={styles.foodTotalItem}>
+                    <Text style={styles.foodTotalValue}>{foodTotals?.fat || 0}g</Text>
+                    <Text style={styles.foodTotalLabel}>fat</Text>
+                  </View>
+                </View>
+                <View style={styles.foodLogsList}>
+                  {foodLogs.slice(0, 3).map((log: any) => (
+                    <View key={log.id} style={styles.foodLogItem}>
+                      <View style={styles.foodLogIcon}>
+                        <Ionicons 
+                          name={
+                            log.mealType === 'BREAKFAST' ? 'sunny-outline' :
+                            log.mealType === 'LUNCH' ? 'partly-sunny-outline' :
+                            log.mealType === 'DINNER' ? 'moon-outline' :
+                            'cafe-outline'
+                          } 
+                          size={16} 
+                          color={colors.primary} 
+                        />
+                      </View>
+                      <View style={styles.foodLogContent}>
+                        <Text style={styles.foodLogDescription} numberOfLines={1}>
+                          {log.description}
+                        </Text>
+                        <Text style={styles.foodLogMeta}>
+                          {log.calories} cal • {log.mealType?.toLowerCase()}
+                        </Text>
+                      </View>
+                    </View>
+                  ))}
+                  {foodLogs.length > 3 && (
+                    <TouchableOpacity onPress={() => navigation.navigate('Food')}>
+                      <Text style={styles.linkText}>
+                        +{foodLogs.length - 3} more items
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </>
+            ) : (
+              <View style={styles.emptyFoodState}>
+                <Ionicons name="restaurant-outline" size={32} color={colors.textLight} />
+                <Text style={styles.mutedText}>No food logged today</Text>
+                <TouchableOpacity 
+                  style={styles.scanFoodButton}
+                  onPress={() => navigation.navigate('Food')}
+                >
+                  <Ionicons name="camera-outline" size={16} color="#fff" />
+                  <Text style={styles.scanFoodButtonText}>Scan Food</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+
             <View style={styles.cardGrid}>
               <View style={styles.stripCard}>
                 <View style={styles.cardHeaderRow}>
@@ -456,110 +562,6 @@ const getEnergyState = (score: number | null): EnergyState => {
                 </Text>
               )}
             </View>
-          </View>
-
-          {/* Today's Food Log */}
-          <View style={styles.stripCard}>
-            <View style={styles.cardHeaderRow}>
-              <Text style={styles.cardTitle}>Today's Food</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Food')}>
-                <Text style={styles.linkText}>+ Add</Text>
-              </TouchableOpacity>
-            </View>
-            
-            {/* Calorie Goal Tracker - Simple */}
-            {(() => {
-              const calorieGoal = healthData?.calorieGoal || 2000;
-              const consumed = foodTotals?.calories || 0;
-              const remaining = calorieGoal - consumed;
-              const progress = Math.min((consumed / calorieGoal) * 100, 100);
-              const isOverBudget = remaining < 0;
-              
-              return (
-                <View style={styles.calorieTracker}>
-                  <View style={styles.calorieSimpleRow}>
-                    <Text style={styles.calorieMainText}>
-                      {isOverBudget ? (
-                        <Text style={styles.calorieOver}>{Math.abs(remaining)} over limit</Text>
-                      ) : (
-                        <><Text style={styles.calorieHighlight}>{remaining}</Text> cal left</>
-                      )}
-                    </Text>
-                    <Text style={styles.calorieOfGoal}>{consumed} / {calorieGoal}</Text>
-                  </View>
-                  <View style={styles.calorieProgressBg}>
-                    <LinearGradient
-                      colors={isOverBudget ? ['#f87171', '#ef4444'] : [colors.primary, colors.primaryLight]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={[styles.calorieProgressFill, { width: `${Math.min(progress, 100)}%` }]}
-                    />
-                  </View>
-                </View>
-              );
-            })()}
-
-            {foodLogs.length > 0 ? (
-              <>
-                <View style={styles.foodTotalsRow}>
-                  <View style={styles.foodTotalItem}>
-                    <Text style={styles.foodTotalValue}>{foodTotals?.protein || 0}g</Text>
-                    <Text style={styles.foodTotalLabel}>protein</Text>
-                  </View>
-                  <View style={styles.foodTotalItem}>
-                    <Text style={styles.foodTotalValue}>{foodTotals?.carbs || 0}g</Text>
-                    <Text style={styles.foodTotalLabel}>carbs</Text>
-                  </View>
-                  <View style={styles.foodTotalItem}>
-                    <Text style={styles.foodTotalValue}>{foodTotals?.fat || 0}g</Text>
-                    <Text style={styles.foodTotalLabel}>fat</Text>
-                  </View>
-                </View>
-                <View style={styles.foodLogsList}>
-                  {foodLogs.slice(0, 5).map((log: any) => (
-                    <View key={log.id} style={styles.foodLogItem}>
-                      <View style={styles.foodLogIcon}>
-                        <Ionicons 
-                          name={
-                            log.mealType === 'BREAKFAST' ? 'sunny-outline' :
-                            log.mealType === 'LUNCH' ? 'partly-sunny-outline' :
-                            log.mealType === 'DINNER' ? 'moon-outline' :
-                            'cafe-outline'
-                          } 
-                          size={16} 
-                          color={colors.primary} 
-                        />
-                      </View>
-                      <View style={styles.foodLogContent}>
-                        <Text style={styles.foodLogDescription} numberOfLines={1}>
-                          {log.description}
-                        </Text>
-                        <Text style={styles.foodLogMeta}>
-                          {log.calories} cal • {log.mealType?.toLowerCase()}
-                        </Text>
-                      </View>
-                    </View>
-                  ))}
-                  {foodLogs.length > 5 && (
-                    <Text style={styles.mutedText}>
-                      +{foodLogs.length - 5} more items
-                    </Text>
-                  )}
-                </View>
-              </>
-            ) : (
-              <View style={styles.emptyFoodState}>
-                <Ionicons name="restaurant-outline" size={32} color={colors.textLight} />
-                <Text style={styles.mutedText}>No food logged today</Text>
-                <TouchableOpacity 
-                  style={styles.scanFoodButton}
-                  onPress={() => navigation.navigate('Food')}
-                >
-                  <Ionicons name="camera-outline" size={16} color="#fff" />
-                  <Text style={styles.scanFoodButtonText}>Scan Food</Text>
-                </TouchableOpacity>
-              </View>
-            )}
           </View>
 
           <View style={styles.fullCard}>
