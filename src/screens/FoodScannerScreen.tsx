@@ -19,7 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { colors } from '../constants/theme';
-import api from '../services/api';
+import api, { foodAPI } from '../services/api';
 
 const { width } = Dimensions.get('window');
 
@@ -185,19 +185,16 @@ export default function FoodScannerScreen() {
 
       const imageBase64 = await base64Promise;
 
-      const result = await api.post('/food/analyze', {
-        imageBase64,
-        mealType: selectedMealType,
-      });
+      const result = await foodAPI.analyze(imageBase64, selectedMealType);
 
-      if (result.data.success) {
-        setAnalysis(result.data.analysis);
+      if (result.success) {
+        setAnalysis(result.analysis);
         setUnclearResult(null);
-      } else if (result.data.unclear) {
+      } else if (result.unclear) {
         // Image was unclear - show message and options
         setUnclearResult({
-          reason: result.data.reason,
-          suggestion: result.data.suggestion,
+          reason: result.reason,
+          suggestion: result.suggestion,
         });
         setAnalysis(null);
       } else {
@@ -216,7 +213,7 @@ export default function FoodScannerScreen() {
 
     setSaving(true);
     try {
-      const result = await api.post('/food/log', {
+      const result = await foodAPI.log({
         description: analysis.description,
         calories: analysis.calories,
         protein: analysis.protein,
@@ -228,10 +225,13 @@ export default function FoodScannerScreen() {
         confidence: analysis.confidence,
       });
 
-      if (result.data.success) {
+      console.log('Food log API response:', JSON.stringify(result, null, 2));
+
+      if (result.success) {
+        console.log('Food logged successfully! ID:', result.foodLog?.id);
         Alert.alert(
           'Logged! 🎉',
-          `${analysis.calories} calories added to your food log.`,
+          `${analysis.calories} calories added to your food log.\n\nID: ${result.foodLog?.id || 'saved'}`,
           [
             {
               text: 'Scan Another',
@@ -243,10 +243,14 @@ export default function FoodScannerScreen() {
             { text: 'Done', style: 'cancel' },
           ]
         );
+      } else {
+        console.error('Food log failed - no success flag:', result);
+        Alert.alert('Error', result.error || 'Failed to save food log.');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Log error:', error);
-      Alert.alert('Error', 'Failed to save food log.');
+      const errorMsg = error.response?.data?.error || error.message || 'Failed to save food log.';
+      Alert.alert('Error', errorMsg);
     } finally {
       setSaving(false);
     }
@@ -278,7 +282,7 @@ export default function FoodScannerScreen() {
 
     setSaving(true);
     try {
-      const result = await api.post('/food/log', {
+      const result = await foodAPI.log({
         description: manualFood.trim(),
         calories,
         protein: parseInt(manualProtein) || 0,
@@ -290,7 +294,9 @@ export default function FoodScannerScreen() {
         confidence: 1.0, // User entered it manually
       });
 
-      if (result.data.success) {
+      console.log('Manual food log response:', JSON.stringify(result, null, 2));
+
+      if (result.success) {
         Alert.alert(
           'Logged! 🎉',
           `${calories} calories added to your food log.`,
@@ -302,10 +308,13 @@ export default function FoodScannerScreen() {
             { text: 'Done', style: 'cancel' },
           ]
         );
+      } else {
+        Alert.alert('Error', result.error || 'Failed to save food log.');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Log error:', error);
-      Alert.alert('Error', 'Failed to save food log.');
+      const errorMsg = error.response?.data?.error || error.message || 'Failed to save food log.';
+      Alert.alert('Error', errorMsg);
     } finally {
       setSaving(false);
     }

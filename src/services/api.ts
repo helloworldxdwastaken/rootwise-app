@@ -194,4 +194,63 @@ export const memoryAPI = {
   },
 };
 
+// ==================== FOOD ====================
+
+export const foodAPI = {
+  analyze: async (imageBase64: string, mealType?: string) => {
+    try {
+      console.log('Analyzing food image...');
+      const response = await api.post('/food/analyze', { imageBase64, mealType });
+      console.log('Food analysis response:', JSON.stringify(response.data, null, 2));
+      return response.data;
+    } catch (error: any) {
+      console.error('Food analysis error:', error.response?.data || error.message);
+      throw error;
+    }
+  },
+
+  log: async (data: {
+    description: string;
+    calories: number;
+    protein?: number;
+    carbs?: number;
+    fat?: number;
+    fiber?: number | null;
+    mealType?: string;
+    portionSize?: string;
+    confidence?: number;
+  }) => {
+    try {
+      console.log('Logging food:', JSON.stringify(data, null, 2));
+      const response = await api.post('/food/log', data);
+      console.log('Food log response:', JSON.stringify(response.data, null, 2));
+      return response.data;
+    } catch (error: any) {
+      console.error('Food log error:', error.response?.data || error.message);
+      throw error;
+    }
+  },
+
+  getLogs: async (date?: string, days?: number) => {
+    try {
+      const params: any = {};
+      if (date) params.date = date;
+      if (days) params.days = days;
+      
+      console.log('Fetching food logs...');
+      const response = await api.get('/food/log', { params });
+      console.log('Food logs:', JSON.stringify(response.data, null, 2));
+      return response.data;
+    } catch (error: any) {
+      console.error('Food logs fetch error:', error.response?.data || error.message);
+      throw error;
+    }
+  },
+
+  delete: async (id: string) => {
+    const response = await api.delete(`/food/log?id=${id}`);
+    return response.data;
+  },
+};
+
 export default api;
