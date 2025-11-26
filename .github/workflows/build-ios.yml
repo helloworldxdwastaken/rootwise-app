@@ -24,19 +24,13 @@ jobs:
         run: |
           echo "Current Xcode version:"
           xcodebuild -version
-          echo ""
-          echo "Available Xcode versions:"
-          ls /Applications | grep Xcode || true
 
       - name: Clean and install dependencies
         run: |
           rm -rf node_modules
           rm -f package-lock.json
           npm install --legacy-peer-deps
-          
-          # Remove react-native-reanimated if it was pulled in as a transitive dependency
           if [ -d "node_modules/react-native-reanimated" ]; then
-            echo "⚠️ Found react-native-reanimated as transitive dependency - removing it"
             rm -rf node_modules/react-native-reanimated
           fi
 
@@ -46,118 +40,97 @@ jobs:
       - name: Patch Podfile for lottie-react-native Xcode 16 compatibility
         run: |
           cd ios
-          echo "📝 Adding post_install hooks for lottie-react-native Xcode 16 compatibility..."
+          echo "Patching Podfile for lottie-react-native..."
           
-          # Create a Ruby script to properly patch the Podfile
-          cat > patch_podfile.rb << 'RUBY_SCRIPT'
-          podfile_path = 'Podfile'
-          content = File.read(podfile_path)
+          # Create the lottie fix as a separate file
+          cat > /tmp/lottie_fix.rb << 'EOF'
+          # Fix lottie-react-native Swift compilation for Xcode 16
+          installer.pods_project.targets.each do |target|
+            if target.name == "lottie-react-native" || target.name == "lottie-ios"
+              target.build_configurations.each do |config|
+                config.build_settings["SWIFT_VERSION"] = "5.0"
+                config.build_settings["CLANG_ENABLE_MODULES"] = "YES"
+                config.build_settings["BUILD_LIBRARY_FOR_DISTRIBUTION"] = "NO"
+              end
+            end
+          end
+          EOF
           
-          # The lottie fix code to inject
-          lottie_fix = <<-FIX
+          # Check if post_install block exists and inject the fix
+          if grep -q "post_install do |installer|" Podfile; then
+            echo "Found existing post_install block"
+            # Use sed to inject before the closing 'end' of post_install
+            # Find line number of post_install, then find its closing end
+            LOTTIE_CODE=$(cat /tmp/lottie_fix.rb)
+            
+            # Create a Python script to do the injection properly
+            python3 << 'PYTHON_SCRIPT'
+          import re
           
+          with open('Podfile', 'r') as f:
+              content = f.read()
+          
+          lottie_fix = '''
             # Fix lottie-react-native Swift compilation for Xcode 16
             installer.pods_project.targets.each do |target|
-              if target.name == 'lottie-react-native' || target.name == 'lottie-ios'
+              if target.name == "lottie-react-native" || target.name == "lottie-ios"
                 target.build_configurations.each do |config|
-                  config.build_settings['SWIFT_VERSION'] = '5.0'
-                  config.build_settings['CLANG_ENABLE_MODULES'] = 'YES'
-                  config.build_settings['BUILD_LIBRARY_FOR_DISTRIBUTION'] = 'NO'
-                  config.build_settings['SWIFT_COMPILATION_MODE'] = 'wholemodule'
+                  config.build_settings["SWIFT_VERSION"] = "5.0"
+                  config.build_settings["CLANG_ENABLE_MODULES"] = "YES"
+                  config.build_settings["BUILD_LIBRARY_FOR_DISTRIBUTION"] = "NO"
                 end
               end
             end
-          FIX
+          '''
           
-          # Find the post_install block and inject before the closing 'end'
-          if content.include?('post_install do |installer|')
-            # Find the last 'end' of the post_install block by looking for pattern
-            # We need to inject our code inside the existing post_install block
-            
-            # Strategy: Find 'post_install do |installer|' and then find the matching 'end'
-            # Inject our code right before that end
-            
-            lines = content.lines
-            post_install_start = nil
-            post_install_end = nil
-            indent_level = 0
-            
-            lines.each_with_index do |line, index|
-              if line =~ /post_install\s+do\s*\|installer\|/
-                post_install_start = index
-                indent_level = 1
-              elsif post_install_start && indent_level > 0
-                indent_level += line.scan(/\bdo\b/).count
-                indent_level -= line.scan(/\bend\b/).count
-                if indent_level == 0
-                  post_install_end = index
-                  break
-                end
-              end
-            end
-            
-            if post_install_start && post_install_end
-              # Insert our fix just before the closing end
-              lines.insert(post_install_end, lottie_fix)
-              content = lines.join
-              puts "✅ Injected lottie fix into existing post_install block"
-            else
-              puts "⚠️ Could not find post_install block boundaries"
-            end
+          # Find post_install block and inject before its end
+          pattern = r'(post_install do \|installer\|.*?)(^end)'
+          
+          def replacer(match):
+              return match.group(1) + lottie_fix + '\n' + match.group(2)
+          
+          new_content = re.sub(pattern, replacer, content, flags=re.MULTILINE | re.DOTALL)
+          
+          with open('Podfile', 'w') as f:
+              f.write(new_content)
+          
+          print("Lottie fix injected into existing post_install block")
+          PYTHON_SCRIPT
           else
-            # No post_install block exists, add one at the end
-            content += <<-BLOCK
-
-post_install do |installer|
-#{lottie_fix}
-end
-            BLOCK
-            puts "✅ Added new post_install block with lottie fix"
-          end
+            echo "Adding new post_install block..."
+            echo '' >> Podfile
+            echo 'post_install do |installer|' >> Podfile
+            echo '  installer.pods_project.targets.each do |target|' >> Podfile
+            echo '    if target.name == "lottie-react-native" || target.name == "lottie-ios"' >> Podfile
+            echo '      target.build_configurations.each do |config|' >> Podfile
+            echo '        config.build_settings["SWIFT_VERSION"] = "5.0"' >> Podfile
+            echo '        config.build_settings["CLANG_ENABLE_MODULES"] = "YES"' >> Podfile
+            echo '        config.build_settings["BUILD_LIBRARY_FOR_DISTRIBUTION"] = "NO"' >> Podfile
+            echo '      end' >> Podfile
+            echo '    end' >> Podfile
+            echo '  end' >> Podfile
+            echo 'end' >> Podfile
+          fi
           
-          File.write(podfile_path, content)
-          puts "✅ Podfile patched successfully"
-          RUBY_SCRIPT
-          
-          ruby patch_podfile.rb
-          rm patch_podfile.rb
-          
-          echo ""
-          echo "📄 Podfile post_install section:"
-          grep -A 50 "post_install" Podfile | head -60 || echo "No post_install found"
+          echo "Podfile patched. Last 30 lines:"
+          tail -30 Podfile
 
       - name: Clean CocoaPods caches
         run: |
           cd ios
           pod cache clean --all || true
-          rm -rf ~/Library/Caches/CocoaPods || true
-          rm -rf ~/Library/Developer/Xcode/DerivedData/* || true
-          rm -rf Pods || true
-          rm -rf Podfile.lock || true
+          rm -rf Pods Podfile.lock || true
 
       - name: Install CocoaPods dependencies
         run: |
           cd ios
           pod install --repo-update
 
-      - name: Verify lottie Swift settings applied
-        run: |
-          cd ios
-          echo "🔍 Checking if lottie-react-native has SWIFT_VERSION set..."
-          if [ -f "Pods/Pods.xcodeproj/project.pbxproj" ]; then
-            grep -A 5 "lottie-react-native" Pods/Pods.xcodeproj/project.pbxproj | grep -i "SWIFT" | head -10 || echo "Swift settings not found in project file directly"
-          fi
-          echo ""
-          echo "✅ Pod install completed, Swift settings should be applied by post_install hooks"
-
       - name: Build iOS app (Unsigned)
         run: |
           cd ios
           set -o pipefail
-          
           xcodebuild clean -workspace Rootwise.xcworkspace -scheme Rootwise || true
-          rm -rf ~/Library/Developer/Xcode/DerivedData/ModuleCache.noindex || true
-          
           xcodebuild -workspace Rootwise.xcworkspace \
             -scheme Rootwise \
             -configuration Release \
@@ -199,4 +172,4 @@ end
           retention-days: 7
 
       - name: Build Complete
-        run: echo "✅ Unsigned iOS IPA ready for download from Artifacts"
+        run: echo "Unsigned iOS IPA ready for download"
