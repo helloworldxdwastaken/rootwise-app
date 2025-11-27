@@ -231,321 +231,367 @@ const getEnergyState = (score: number | null): EnergyState => {
             <Text style={styles.headerTagline}>Your daily wellness overview</Text>
           </View>
 
-          <View style={styles.heroCard}>
+          <View style={styles.energyCard}>
+            {/* Header */}
             <View style={styles.cardHeaderRow}>
               <View>
-                <Text style={styles.cardTitle}>Energy</Text>
-                <Text style={styles.cardSubtitle}>{energyState.label}</Text>
+                <Text style={styles.energyCardTitle}>Energy</Text>
+                <Text style={styles.energyCardSubtitle}>{energyState.label}</Text>
               </View>
               <TouchableOpacity
-                style={[styles.actionButton, styles.actionButtonGreen]}
+                style={styles.energyUpdateButton}
                 onPress={() => {
                   setPendingEnergy(energyScore ?? 5);
                   setEnergyModalVisible(true);
                 }}
               >
-                <Text style={[styles.actionButtonText, { color: '#059669' }]}>Update</Text>
+                <Text style={styles.energyUpdateText}>Update</Text>
               </TouchableOpacity>
             </View>
             
-            <View style={styles.energyMainContent}>
-              <Text style={styles.energyEmoji}>{getEnergyEmoji(energyScore)}</Text>
+            {/* Main content with emoji on left */}
+            <View style={styles.energyMainRow}>
+              {/* Emoji on left */}
+              <Text style={styles.energyFaceEmoji}>{getEnergyEmoji(energyScore)}</Text>
               
-              <View style={styles.energyScoreSection}>
+              {/* Score, bar, note on right */}
+              <View style={styles.energyDetailsColumn}>
                 <View style={styles.energyScoreRow}>
                   <Text style={styles.energyScoreBig}>
                     {energyScore !== null ? energyScore : '--'}
                   </Text>
                   <Text style={styles.energyScoreMax}>/ 10</Text>
                 </View>
-                <View style={styles.energyTrack}>
-                  <LinearGradient
-                    colors={energyScore && energyScore >= 7 ? ['#34d399', '#10b981'] : energyScore && energyScore <= 4 ? ['#fca5a5', '#f87171'] : ['#7dd3fc', '#38bdf8']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
+                
+                <View style={styles.energyTrackWhite}>
+                  <View 
                     style={[
-                      styles.energyTrackFill,
-                      { width: `${(Math.min(10, Math.max(0, energyScore || 0)) / 10) * 100}%` },
-                    ]}
+                      styles.energyTrackFillWhite,
+                      { width: `${(Math.min(10, Math.max(0, energyScore || 0)) / 10) * 100}%` }
+                    ]} 
                   />
                 </View>
-                <Text style={styles.energyNote}>{energyState.note}</Text>
+                <Text style={styles.energyNoteWhite}>{energyState.note}</Text>
               </View>
             </View>
 
             {energyScore === null && (
-              <View style={styles.quickActions}>
+              <View style={styles.quickActionsWhite}>
                 <TouchableOpacity
-                  style={[styles.quickAction, { backgroundColor: '#ecfdf5' }]}
+                  style={styles.quickActionWhite}
                   onPress={() => handleQuickLog('energyScore', 6)}
                 >
-                  <Ionicons name="flash-outline" size={16} color={colors.success} />
-                  <Text style={styles.quickActionText}>Log Energy</Text>
+                  <Ionicons name="flash" size={16} color="#f59e0b" />
+                  <Text style={styles.quickActionTextDark}>Log Energy</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.quickAction, { backgroundColor: '#eef2ff' }]}
+                  style={styles.quickActionWhite}
                   onPress={() => handleQuickLog('sleepHours', '7.0')}
                 >
                   <Ionicons name="moon" size={16} color="#6366f1" />
-                  <Text style={styles.quickActionText}>Log Sleep</Text>
+                  <Text style={styles.quickActionTextDark}>Log Sleep</Text>
                 </TouchableOpacity>
               </View>
             )}
           </View>
 
-          {/* Today's Food Log - Moved up for better UX (most checked daily after energy) */}
-          <View style={styles.stripCard}>
-            <View style={styles.cardHeaderRow}>
-              <Text style={styles.cardTitle}>Today's Food</Text>
-              <TouchableOpacity 
-                style={[styles.actionButton, styles.actionButtonGreen]}
-                onPress={() => navigation.navigate('Food')}
-              >
-                <Ionicons name="add" size={14} color="#059669" />
-                <Text style={[styles.actionButtonText, { color: '#059669' }]}>Add</Text>
-              </TouchableOpacity>
+          {/* Today's Food Log - Premium Card */}
+          <LinearGradient
+            colors={['#fef3c7', '#ffedd5']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.foodCard}
+          >
+            {/* Big plate emoji on right */}
+            <View style={styles.foodEmojiContainer}>
+              <Text style={styles.foodBigEmoji}>🍽️</Text>
             </View>
-            
-            {/* Calorie Goal Tracker - Simple */}
-            {(() => {
-              const calorieGoal = healthData?.calorieGoal || 2000;
-              const consumed = foodTotals?.calories || 0;
-              const remaining = calorieGoal - consumed;
-              const progress = Math.min((consumed / calorieGoal) * 100, 100);
-              const isOverBudget = remaining < 0;
+            {/* Content */}
+            <View style={styles.foodContent}>
+              <View style={styles.cardHeaderRow}>
+                <Text style={styles.foodCardTitle}>Today's Food</Text>
+                <TouchableOpacity 
+                  style={styles.foodAddButton}
+                  onPress={() => navigation.navigate('Food')}
+                >
+                  <Ionicons name="add" size={14} color="#c2410c" />
+                  <Text style={styles.foodAddText}>Add</Text>
+                </TouchableOpacity>
+              </View>
               
-              return (
-                <View style={styles.calorieTracker}>
-                  <View style={styles.calorieSimpleRow}>
-                    <Text style={styles.calorieMainText}>
+              {/* Calorie Goal Tracker */}
+              {(() => {
+                const calorieGoal = healthData?.calorieGoal || 2000;
+                const consumed = foodTotals?.calories || 0;
+                const remaining = calorieGoal - consumed;
+                const progress = Math.min((consumed / calorieGoal) * 100, 100);
+                const isOverBudget = remaining < 0;
+                
+                return (
+                  <View style={styles.foodCalorieSection}>
+                    <Text style={styles.foodCalorieMain}>
                       {isOverBudget ? (
-                        <Text style={styles.calorieOver}>{Math.abs(remaining)} over limit</Text>
+                        <Text style={styles.foodCalorieOver}>{Math.abs(remaining)} over</Text>
                       ) : (
-                        <><Text style={styles.calorieHighlight}>{remaining}</Text> cal left</>
+                        <>{remaining} cal left</>
                       )}
                     </Text>
-                    <Text style={styles.calorieOfGoal}>{consumed} / {calorieGoal}</Text>
-                  </View>
-                  <View style={styles.calorieProgressBg}>
-                    <LinearGradient
-                      colors={isOverBudget ? ['#f87171', '#ef4444'] : [colors.primary, colors.primaryLight]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={[styles.calorieProgressFill, { width: `${Math.min(progress, 100)}%` }]}
-                    />
-                  </View>
-                </View>
-              );
-            })()}
-
-            {foodLogs.length > 0 ? (
-              <>
-                <View style={styles.foodTotalsRow}>
-                  <View style={styles.foodTotalItem}>
-                    <Text style={styles.foodTotalValue}>{foodTotals?.protein || 0}g</Text>
-                    <Text style={styles.foodTotalLabel}>protein</Text>
-                  </View>
-                  <View style={styles.foodTotalItem}>
-                    <Text style={styles.foodTotalValue}>{foodTotals?.carbs || 0}g</Text>
-                    <Text style={styles.foodTotalLabel}>carbs</Text>
-                  </View>
-                  <View style={styles.foodTotalItem}>
-                    <Text style={styles.foodTotalValue}>{foodTotals?.fat || 0}g</Text>
-                    <Text style={styles.foodTotalLabel}>fat</Text>
-                  </View>
-                </View>
-                <View style={styles.foodLogsList}>
-                  {foodLogs.slice(0, 3).map((log: any) => (
-                    <View key={log.id} style={styles.foodLogItem}>
-                      <View style={styles.foodLogIcon}>
-                        <Ionicons 
-                          name={
-                            log.mealType === 'BREAKFAST' ? 'sunny-outline' :
-                            log.mealType === 'LUNCH' ? 'partly-sunny-outline' :
-                            log.mealType === 'DINNER' ? 'moon-outline' :
-                            'cafe-outline'
-                          } 
-                          size={16} 
-                          color={colors.primary} 
-                        />
-                      </View>
-                      <View style={styles.foodLogContent}>
-                        <Text style={styles.foodLogDescription} numberOfLines={1}>
-                          {log.description}
-                        </Text>
-                        <Text style={styles.foodLogMeta}>
-                          {log.calories} cal • {log.mealType?.toLowerCase()}
-                        </Text>
-                      </View>
+                    <Text style={styles.foodCalorieGoal}>{consumed} / {calorieGoal}</Text>
+                    <View style={styles.foodProgressBg}>
+                      <View 
+                        style={[
+                          styles.foodProgressFill, 
+                          { 
+                            width: `${Math.min(progress, 100)}%`,
+                            backgroundColor: isOverBudget ? '#ef4444' : '#ea580c'
+                          }
+                        ]} 
+                      />
                     </View>
-                  ))}
+                  </View>
+                );
+              })()}
+
+              {foodLogs.length > 0 ? (
+                <>
+                  <View style={styles.foodMacrosRow}>
+                    <View style={styles.foodMacroItem}>
+                      <Text style={styles.foodMacroValue}>{foodTotals?.protein || 0}g</Text>
+                      <Text style={styles.foodMacroLabel}>protein</Text>
+                    </View>
+                    <View style={styles.foodMacroItem}>
+                      <Text style={styles.foodMacroValue}>{foodTotals?.carbs || 0}g</Text>
+                      <Text style={styles.foodMacroLabel}>carbs</Text>
+                    </View>
+                    <View style={styles.foodMacroItem}>
+                      <Text style={styles.foodMacroValue}>{foodTotals?.fat || 0}g</Text>
+                      <Text style={styles.foodMacroLabel}>fat</Text>
+                    </View>
+                  </View>
+                  {/* Last 3 food items */}
+                  <View style={styles.foodItemsList}>
+                    {foodLogs.slice(0, 3).map((log: any) => (
+                      <View key={log.id} style={styles.foodItemRow}>
+                        <View style={styles.foodItemIcon}>
+                          <Ionicons 
+                            name={
+                              log.mealType === 'BREAKFAST' ? 'sunny-outline' :
+                              log.mealType === 'LUNCH' ? 'restaurant-outline' :
+                              log.mealType === 'DINNER' ? 'moon-outline' : 'cafe-outline'
+                            } 
+                            size={18} 
+                            color="#ffffff" 
+                          />
+                        </View>
+                        <View style={styles.foodItemDetails}>
+                          <Text style={styles.foodItemName} numberOfLines={1}>
+                            {log.description || 'Food'}
+                          </Text>
+                          <Text style={styles.foodItemMeta}>
+                            {log.calories} cal  •  {log.mealType?.toLowerCase()}
+                          </Text>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
                   {foodLogs.length > 3 && (
                     <TouchableOpacity onPress={() => navigation.navigate('Food')}>
-                      <Text style={styles.linkText}>
-                        +{foodLogs.length - 3} more items
+                      <Text style={styles.foodViewAll}>
+                        +{foodLogs.length - 3} more items →
                       </Text>
                     </TouchableOpacity>
                   )}
+                </>
+              ) : (
+                <View style={styles.foodEmptyState}>
+                  <Text style={styles.foodEmptyText}>No food logged yet</Text>
+                  <TouchableOpacity 
+                    style={styles.foodScanButton}
+                    onPress={() => navigation.navigate('Food')}
+                  >
+                    <Ionicons name="camera" size={16} color="#c2410c" />
+                    <Text style={styles.foodScanText}>Scan Food</Text>
+                  </TouchableOpacity>
                 </View>
-              </>
-            ) : (
-              <View style={styles.emptyFoodState}>
-                <Ionicons name="restaurant-outline" size={32} color={colors.textLight} />
-                <Text style={styles.mutedText}>No food logged today</Text>
-                <TouchableOpacity 
-                  style={styles.scanFoodButton}
-                  onPress={() => navigation.navigate('Food')}
-                >
-                  <Ionicons name="camera-outline" size={16} color="#fff" />
-                  <Text style={styles.scanFoodButtonText}>Scan Food</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
+              )}
+            </View>
+          </LinearGradient>
 
             {/* Sleep & Weekly Patterns Row */}
             <View style={styles.cardGrid}>
-              <View style={styles.stripCard}>
-                <View style={styles.cardHeaderRow}>
-                  <Text style={styles.cardTitle}>Sleep</Text>
-                  <TouchableOpacity
-                    style={[styles.actionButton, { backgroundColor: '#eef2ff' }]}
-                    onPress={() => {
-                      const currentSleep = healthData?.sleepHours ? parseFloat(healthData.sleepHours) : 7;
-                      setPendingSleep(Number.isNaN(currentSleep) ? 7 : currentSleep);
-                      setSleepModalVisible(true);
-                    }}
-                  >
-                    <Text style={[styles.actionButtonText, { color: '#6366f1' }]}>Update</Text>
-                  </TouchableOpacity>
+              <View style={styles.sleepCard}>
+                {/* Stars decoration */}
+                <View style={styles.sleepStars}>
+                  <Text style={styles.star1}>✦</Text>
+                  <Text style={styles.star2}>✧</Text>
+                  <Text style={styles.star3}>✦</Text>
+                  <Text style={styles.star4}>✧</Text>
+                  <Text style={styles.star5}>✦</Text>
                 </View>
-                {healthData?.sleepHours ? (
-                  <>
-                    <View style={styles.sleepValueRow}>
-                      <Ionicons name="moon" size={20} color="#6366f1" />
-                      <Text style={styles.mainValue}>{healthData.sleepHours} hrs</Text>
-                    </View>
-                    <Text style={[styles.subLabel, { color: parseFloat(healthData.sleepHours) >= 7 ? colors.success : colors.warning }]}>
-                      {parseFloat(healthData.sleepHours) >= 7 ? '✓ Great sleep' : 'Try for more rest'}
-                    </Text>
-                  </>
-                ) : (
-                  <View style={styles.sleepEmptyState}>
-                    <Ionicons name="moon-outline" size={24} color={colors.textLight} />
-                    <Text style={styles.mutedText}>Not logged</Text>
+                {/* Big moon emoji - half visible */}
+                <View style={styles.sleepMoonContainer}>
+                  <Text style={styles.sleepMoonEmoji}>🌙</Text>
+                </View>
+                {/* Content */}
+                <View style={styles.sleepContent}>
+                  <View style={styles.cardHeaderRow}>
+                    <Text style={styles.sleepCardTitle}>Sleep</Text>
+                    <TouchableOpacity
+                      style={styles.sleepUpdateButton}
+                      onPress={() => {
+                        const currentSleep = healthData?.sleepHours ? parseFloat(healthData.sleepHours) : 7;
+                        setPendingSleep(Number.isNaN(currentSleep) ? 7 : currentSleep);
+                        setSleepModalVisible(true);
+                      }}
+                    >
+                      <Text style={styles.sleepUpdateText}>Update</Text>
+                    </TouchableOpacity>
                   </View>
-                )}
+                  {healthData?.sleepHours ? (
+                    <>
+                      <Text style={styles.sleepValue}>{healthData.sleepHours} hrs</Text>
+                      <Text style={styles.sleepStatus}>
+                        {parseFloat(healthData.sleepHours) >= 7 ? '✓ Great sleep' : 'Need more rest'}
+                      </Text>
+                    </>
+                  ) : (
+                    <>
+                      <Text style={styles.sleepValue}>--</Text>
+                      <Text style={styles.sleepStatus}>Not logged</Text>
+                    </>
+                  )}
+                </View>
               </View>
 
-              <View style={styles.stripCard}>
-                <View style={styles.cardHeaderRow}>
-                  <Text style={styles.cardTitle}>This Week</Text>
-                  <Text style={styles.subLabel}>{weeklyData?.dataPoints || 0} days</Text>
+              <View style={styles.weekCard}>
+                {/* Decorations */}
+                <View style={styles.weekDecorations}>
+                  <Text style={styles.weekDeco1}>✦</Text>
+                  <Text style={styles.weekDeco2}>✧</Text>
+                  <Text style={styles.weekDeco3}>✦</Text>
                 </View>
-                {weeklyData?.avgEnergy ? (
-                  <>
-                    <View style={styles.weeklyStatRow}>
-                      <Text style={styles.weeklyStatValue}>{weeklyData.avgEnergy.toFixed(1)}</Text>
-                      <Text style={styles.weeklyStatLabel}>avg energy</Text>
-                    </View>
-                    {(weeklyData?.bestDay || weeklyData?.worstDay) && (
-                      <View style={styles.weeklyHighLow}>
-                        {weeklyData?.bestDay && (
-                          <Text style={styles.weeklyHighLowText}>
-                            ↑ {weeklyData.bestDay.day} ({weeklyData.bestDay.energy})
-                          </Text>
-                        )}
-                        {weeklyData?.worstDay && (
-                          <Text style={styles.weeklyHighLowText}>
-                            ↓ {weeklyData.worstDay.day} ({weeklyData.worstDay.energy})
-                          </Text>
-                        )}
-                      </View>
-                    )}
-                  </>
-                ) : (
-                  <View style={styles.sleepEmptyState}>
-                    <Ionicons name="analytics-outline" size={24} color={colors.textLight} />
-                    <Text style={styles.mutedText}>No data yet</Text>
+                {/* Big calendar emoji */}
+                <View style={styles.weekEmojiContainer}>
+                  <Text style={styles.weekBigEmoji}>📅</Text>
+                </View>
+                {/* Content */}
+                <View style={styles.weekContent}>
+                  <View style={styles.cardHeaderRow}>
+                    <Text style={styles.weekCardTitle}>This Week</Text>
+                    <Text style={styles.weekDaysLabel}>{weeklyData?.dataPoints || 0} days</Text>
                   </View>
-                )}
+                  {weeklyData?.avgEnergy ? (
+                    <>
+                      <Text style={styles.weekAvgValue}>{weeklyData.avgEnergy.toFixed(1)}</Text>
+                      <Text style={styles.weekAvgLabel}>avg energy</Text>
+                      {(weeklyData?.bestDay || weeklyData?.worstDay) && (
+                        <View style={styles.weekHighLow}>
+                          {weeklyData?.bestDay && (
+                            <Text style={styles.weekHighLowText}>
+                              ↑ {weeklyData.bestDay.day}
+                            </Text>
+                          )}
+                          {weeklyData?.worstDay && (
+                            <Text style={styles.weekHighLowText}>
+                              ↓ {weeklyData.worstDay.day}
+                            </Text>
+                          )}
+                        </View>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <Text style={styles.weekAvgValue}>--</Text>
+                      <Text style={styles.weekAvgLabel}>No data yet</Text>
+                    </>
+                  )}
+                </View>
               </View>
             </View>
 
             {/* Hydration & Activity Row */}
             <View style={styles.cardGrid}>
-              <View style={styles.stripCard}>
-                <View style={styles.cardHeaderRow}>
-                  <Text style={styles.cardTitle}>Hydration</Text>
-                  <TouchableOpacity
-                    style={[styles.actionButton, styles.actionButtonCyan]}
-                    onPress={() => handleQuickLog('hydrationGlasses', hydrationGlasses + 1)}
-                  >
-                    <Ionicons name="add" size={16} color="#0891b2" />
-                  </TouchableOpacity>
+              <View style={styles.hydrationCard}>
+                {/* Bubbles decoration */}
+                <View style={styles.hydrationDecorations}>
+                  <Text style={styles.hydrationDeco1}>○</Text>
+                  <Text style={styles.hydrationDeco2}>◦</Text>
+                  <Text style={styles.hydrationDeco3}>○</Text>
+                  <Text style={styles.hydrationDeco4}>◦</Text>
                 </View>
-                <View style={styles.compactValueRow}>
-                  <Text style={styles.compactValue}>{hydrationGlasses}</Text>
-                  <Text style={styles.compactUnit}>/ {hydrationTarget}</Text>
+                {/* Big water drop emoji */}
+                <View style={styles.hydrationEmojiContainer}>
+                  <Text style={styles.hydrationBigEmoji}>💧</Text>
                 </View>
-                {/* Water drop indicators */}
-                <View style={styles.waterDropsRow}>
-                  {Array.from({ length: hydrationTarget }).map((_, idx) => (
-                    <Ionicons 
-                      key={idx} 
-                      name={idx < hydrationGlasses ? "water" : "water-outline"} 
-                      size={14} 
-                      color={idx < hydrationGlasses ? "#0ea5e9" : "#cbd5e1"} 
+                {/* Content */}
+                <View style={styles.hydrationContent}>
+                  <View style={styles.cardHeaderRow}>
+                    <Text style={styles.hydrationCardTitle}>Hydration</Text>
+                    <TouchableOpacity
+                      style={styles.hydrationAddButton}
+                      onPress={() => handleQuickLog('hydrationGlasses', hydrationGlasses + 1)}
+                    >
+                      <Ionicons name="add" size={16} color="#0284c7" />
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={styles.hydrationValue}>{hydrationGlasses} / {hydrationTarget}</Text>
+                  <View style={styles.hydrationProgressBg}>
+                    <View 
+                      style={[
+                        styles.hydrationProgressFill, 
+                        { width: `${Math.min((hydrationGlasses / hydrationTarget) * 100, 100)}%` }
+                      ]} 
                     />
-                  ))}
-                </View>
-                <View style={styles.hydrationFooter}>
-                  <Text style={styles.hydrationPercent}>
-                    {Math.round((hydrationGlasses / hydrationTarget) * 100)}%
-                  </Text>
-                  <Text style={[styles.subLabel, { color: hydrationGlasses >= hydrationTarget ? colors.success : colors.textSecondary }]}>
-                    {hydrationGlasses >= hydrationTarget ? '✓ Goal reached!' : `${hydrationTarget - hydrationGlasses} more`}
+                  </View>
+                  <Text style={styles.hydrationStatus}>
+                    {hydrationGlasses >= hydrationTarget ? '✓ Goal reached!' : `${hydrationTarget - hydrationGlasses} more glasses`}
                   </Text>
                 </View>
               </View>
 
-              <View style={styles.stripCard}>
-                <View style={styles.cardHeaderRow}>
-                  <Text style={styles.cardTitle}>Activity</Text>
-                  {(healthData?.steps || healthData?.heartRate) && (
-                    <Ionicons name="checkmark-circle" size={16} color="#059669" />
-                  )}
+              <View style={styles.activityCard}>
+                {/* Motion lines decoration */}
+                <View style={styles.activityDecorations}>
+                  <Text style={styles.activityDeco1}>~</Text>
+                  <Text style={styles.activityDeco2}>~</Text>
+                  <Text style={styles.activityDeco3}>✦</Text>
                 </View>
-                {healthData?.steps || healthData?.heartRate || healthData?.activeCalories ? (
-                  <>
-                    <View style={styles.compactValueRow}>
-                      <Ionicons name="footsteps" size={20} color="#d97706" />
-                      <Text style={styles.compactValue}>
+                {/* Big running emoji */}
+                <View style={styles.activityEmojiContainer}>
+                  <Text style={styles.activityBigEmoji}>🏃</Text>
+                </View>
+                {/* Content */}
+                <View style={styles.activityContent}>
+                  <View style={styles.cardHeaderRow}>
+                    <Text style={styles.activityCardTitle}>Activity</Text>
+                    {(healthData?.steps || healthData?.heartRate) && (
+                      <View style={styles.activitySyncBadge}>
+                        <Ionicons name="checkmark" size={12} color="#059669" />
+                      </View>
+                    )}
+                  </View>
+                  {healthData?.steps || healthData?.heartRate || healthData?.activeCalories ? (
+                    <>
+                      <Text style={styles.activityValue}>
                         {healthData?.steps?.toLocaleString() || '0'}
                       </Text>
-                      <Text style={styles.compactUnit}>steps</Text>
-                    </View>
-                    <View style={styles.activityMiniStats}>
-                      {healthData?.heartRate && (
-                        <View style={styles.activityMiniItem}>
-                          <Ionicons name="heart" size={12} color="#dc2626" />
-                          <Text style={styles.activityMiniText}>{healthData.heartRate}</Text>
-                        </View>
-                      )}
-                      {healthData?.activeCalories && (
-                        <View style={styles.activityMiniItem}>
-                          <Ionicons name="flame" size={12} color="#f59e0b" />
-                          <Text style={styles.activityMiniText}>{healthData.activeCalories}</Text>
-                        </View>
-                      )}
-                    </View>
-                  </>
-                ) : (
-                  <View style={styles.sleepEmptyState}>
-                    <Ionicons name="fitness-outline" size={24} color={colors.textLight} />
-                    <Text style={styles.mutedText}>No data</Text>
-                  </View>
-                )}
+                      <Text style={styles.activityLabel}>steps today</Text>
+                      <View style={styles.activityStatsRow}>
+                        {healthData?.heartRate && (
+                          <Text style={styles.activityStatText}>❤️ {healthData.heartRate}</Text>
+                        )}
+                        {healthData?.activeCalories && (
+                          <Text style={styles.activityStatText}>🔥 {healthData.activeCalories}</Text>
+                        )}
+                      </View>
+                    </>
+                  ) : (
+                    <>
+                      <Text style={styles.activityValue}>--</Text>
+                      <Text style={styles.activityLabel}>No data yet</Text>
+                    </>
+                  )}
+                </View>
               </View>
             </View>
 
@@ -569,7 +615,7 @@ const getEnergyState = (score: number | null): EnergyState => {
             </View>
 
             {/* Detected Symptoms Section */}
-            {analyzedSymptoms.length > 0 ? (
+            {analyzedSymptoms.length > 0 && (
               <>
                 <Text style={styles.aiSectionLabel}>Detected patterns</Text>
                 {analyzedSymptoms.map((symptom: any, idx: number) => (
@@ -600,9 +646,13 @@ const getEnergyState = (score: number | null): EnergyState => {
                     </Text>
                   </View>
                 ))}
+              </>
+            )}
 
-                {/* What may be affecting you */}
-                <View style={styles.aiSectionDivider} />
+            {/* What may be affecting you - Always show if there's data */}
+            {(energyScore !== null || healthData?.sleepHours || hydrationGlasses > 0) ? (
+              <>
+                {analyzedSymptoms.length > 0 && <View style={styles.aiSectionDivider} />}
                 <Text style={styles.aiSectionLabel}>What may be affecting you</Text>
                 <View style={styles.chipsContainer}>
                   {energyScore !== null && energyScore < 6 && (
@@ -614,8 +664,7 @@ const getEnergyState = (score: number | null): EnergyState => {
                   {hydrationGlasses < 4 && (
                     <Chip color="#0ea5e9" text={`Under-hydrated (${hydrationGlasses}/${hydrationTarget})`} />
                   )}
-                  {analyzedSymptoms.filter((s: any) => s.confidence === 'high').length === 0 &&
-                    energyScore !== null && energyScore >= 6 &&
+                  {(energyScore === null || energyScore >= 6) &&
                     (!healthData?.sleepHours || parseFloat(healthData.sleepHours) >= 7) &&
                     hydrationGlasses >= 4 && (
                     <Chip color="#34d399" text="No major concerns detected" />
@@ -634,6 +683,11 @@ const getEnergyState = (score: number | null): EnergyState => {
                   )}
                   {hydrationGlasses < 4 && (
                     <Chip color="#0ea5e9" text="Increase water intake" />
+                  )}
+                  {(energyScore === null || energyScore >= 6) &&
+                    (!healthData?.sleepHours || parseFloat(healthData.sleepHours) >= 7) &&
+                    hydrationGlasses >= 4 && (
+                    <Chip color="#34d399" text="Keep up the great work!" />
                   )}
                 </View>
               </>
@@ -854,7 +908,7 @@ const styles = StyleSheet.create({
     // Premium shadow
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.12,
     shadowRadius: 16,
     elevation: 5,
   },
@@ -871,18 +925,31 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: spacing.sm,
   },
+  energyMainRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.lg,
+    marginTop: spacing.md,
+  },
+  energyFaceEmoji: {
+    fontSize: 64,
+  },
+  energyDetailsColumn: {
+    flex: 1,
+    gap: spacing.xs,
+  },
   energyScoreRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
     gap: 4,
   },
   energyScoreBig: {
-    fontSize: 48,
+    fontSize: 32,
     fontWeight: '700',
     color: colors.text,
   },
   energyScoreMax: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '500',
     color: colors.textLight,
   },
@@ -904,10 +971,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: colors.text,
-  },
-  energyCard: {
-    width: '100%',
-    alignItems: 'center',
   },
   energyHeader: {
     flexDirection: 'row',
@@ -969,10 +1032,10 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     // Premium shadow
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 4,
   },
   fullCard: {
     backgroundColor: '#ffffff',
@@ -982,9 +1045,9 @@ const styles = StyleSheet.create({
     // Premium shadow
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
+    shadowOpacity: 0.12,
+    shadowRadius: 14,
+    elevation: 5,
   },
   cardHeaderRow: {
     flexDirection: 'row',
@@ -1065,6 +1128,627 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   // Sleep card compact styles
+  // Premium Sleep Card
+  sleepCard: {
+    flex: 1,
+    backgroundColor: '#6366f1',
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    overflow: 'hidden',
+    position: 'relative',
+    minHeight: 120,
+    // Premium shadow
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  sleepStars: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  star1: {
+    position: 'absolute',
+    top: 12,
+    left: 20,
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.5)',
+  },
+  star2: {
+    position: 'absolute',
+    top: 28,
+    left: 45,
+    fontSize: 8,
+    color: 'rgba(255,255,255,0.3)',
+  },
+  star3: {
+    position: 'absolute',
+    top: 50,
+    left: 15,
+    fontSize: 6,
+    color: 'rgba(255,255,255,0.4)',
+  },
+  star4: {
+    position: 'absolute',
+    top: 70,
+    left: 55,
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.25)',
+  },
+  star5: {
+    position: 'absolute',
+    top: 40,
+    left: 70,
+    fontSize: 8,
+    color: 'rgba(255,255,255,0.35)',
+  },
+  sleepMoonContainer: {
+    position: 'absolute',
+    right: -30,
+    top: '50%',
+    transform: [{ translateY: -40 }],
+  },
+  sleepMoonEmoji: {
+    fontSize: 80,
+    opacity: 0.3,
+  },
+  sleepContent: {
+    flex: 1,
+    zIndex: 1,
+  },
+  sleepCardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  sleepUpdateButton: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: borderRadius.full,
+  },
+  sleepUpdateText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  sleepValue: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#ffffff',
+    marginTop: spacing.sm,
+  },
+  sleepStatus: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 4,
+  },
+  
+  // Premium Energy Card (White, clean)
+  energyCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: borderRadius.xl,
+    padding: spacing.lg,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  energyContent: {
+    flex: 1,
+    zIndex: 1,
+  },
+  energyCardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  energyCardSubtitle: {
+    fontSize: 13,
+    fontWeight: '400',
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  energyUpdateButton: {
+    backgroundColor: '#ecfdf5',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: borderRadius.full,
+  },
+  energyUpdateText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#059669',
+  },
+  energyTrackWhite: {
+    width: '100%',
+    height: 8,
+    backgroundColor: '#f1f5f9',
+    borderRadius: borderRadius.full,
+    overflow: 'hidden',
+    marginTop: spacing.sm,
+  },
+  energyTrackFillWhite: {
+    height: '100%',
+    backgroundColor: '#10b981',
+    borderRadius: borderRadius.full,
+  },
+  energyNoteWhite: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.textSecondary,
+    marginTop: spacing.sm,
+  },
+  quickActionsWhite: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  quickActionWhite: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    backgroundColor: 'rgba(255,255,255,0.8)',
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+  },
+  quickActionTextDark: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  
+  // Premium Food Card (Soft orange/yellow gradient)
+  foodCard: {
+    borderRadius: borderRadius.xl,
+    padding: spacing.lg,
+    overflow: 'hidden',
+    position: 'relative',
+    shadowColor: '#f59e0b',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  foodEmojiContainer: {
+    position: 'absolute',
+    right: -30,
+    top: '50%',
+    transform: [{ translateY: -50 }],
+  },
+  foodBigEmoji: {
+    fontSize: 100,
+    opacity: 0.15,
+  },
+  foodContent: {
+    flex: 1,
+    zIndex: 1,
+  },
+  foodCardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  foodAddButton: {
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: borderRadius.full,
+  },
+  foodAddText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#c2410c',
+  },
+  foodCalorieSection: {
+    marginTop: spacing.md,
+  },
+  foodCalorieMain: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  foodCalorieOver: {
+    color: '#dc2626',
+  },
+  foodCalorieGoal: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  foodProgressBg: {
+    width: '100%',
+    height: 6,
+    backgroundColor: 'rgba(194, 65, 12, 0.15)',
+    borderRadius: borderRadius.full,
+    overflow: 'hidden',
+    marginTop: spacing.sm,
+  },
+  foodProgressFill: {
+    height: '100%',
+    borderRadius: borderRadius.full,
+    backgroundColor: '#ea580c',
+  },
+  foodMacrosRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: spacing.md,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.08)',
+  },
+  foodMacroItem: {
+    alignItems: 'center',
+  },
+  foodMacroValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  foodMacroLabel: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  foodItemsList: {
+    marginTop: spacing.md,
+    gap: spacing.sm,
+  },
+  foodItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  foodItemIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#ea580c',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  foodItemDetails: {
+    flex: 1,
+  },
+  foodItemName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  foodItemMeta: {
+    fontSize: 12,
+    color: '#c2410c',
+    marginTop: 2,
+  },
+  foodViewAll: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#c2410c',
+    marginTop: spacing.sm,
+    textAlign: 'center',
+  },
+  foodEmptyState: {
+    alignItems: 'center',
+    marginTop: spacing.md,
+    gap: spacing.sm,
+  },
+  foodEmptyText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  foodScanButton: {
+    backgroundColor: 'rgba(255,255,255,0.8)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: borderRadius.full,
+  },
+  foodScanText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#c2410c',
+  },
+  
+  // Premium Week Card (Light teal)
+  weekCard: {
+    flex: 1,
+    backgroundColor: '#ccfbf1',
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    overflow: 'hidden',
+    position: 'relative',
+    minHeight: 120,
+    shadowColor: '#14b8a6',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  weekDecorations: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  weekDeco1: {
+    position: 'absolute',
+    top: 12,
+    left: 15,
+    fontSize: 10,
+    color: 'rgba(0,0,0,0.15)',
+  },
+  weekDeco2: {
+    position: 'absolute',
+    top: 35,
+    left: 40,
+    fontSize: 8,
+    color: 'rgba(0,0,0,0.1)',
+  },
+  weekDeco3: {
+    position: 'absolute',
+    top: 60,
+    left: 20,
+    fontSize: 6,
+    color: 'rgba(0,0,0,0.12)',
+  },
+  weekEmojiContainer: {
+    position: 'absolute',
+    right: -25,
+    top: '50%',
+    transform: [{ translateY: -35 }],
+  },
+  weekBigEmoji: {
+    fontSize: 70,
+    opacity: 0.2,
+  },
+  weekContent: {
+    flex: 1,
+    zIndex: 1,
+  },
+  weekCardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#134e4a',
+  },
+  weekDaysLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#0f766e',
+    backgroundColor: 'rgba(255,255,255,0.5)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: borderRadius.full,
+  },
+  weekAvgValue: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#134e4a',
+    marginTop: spacing.sm,
+  },
+  weekAvgLabel: {
+    fontSize: 12,
+    color: '#0f766e',
+    marginTop: 2,
+  },
+  weekHighLow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  weekHighLowText: {
+    fontSize: 11,
+    color: '#115e59',
+  },
+  
+  // Premium Hydration Card (Light blue)
+  hydrationCard: {
+    flex: 1,
+    backgroundColor: '#e0f2fe',
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    overflow: 'hidden',
+    position: 'relative',
+    minHeight: 120,
+    shadowColor: '#0ea5e9',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  hydrationDecorations: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  hydrationDeco1: {
+    position: 'absolute',
+    top: 15,
+    left: 20,
+    fontSize: 12,
+    color: 'rgba(0,0,0,0.12)',
+  },
+  hydrationDeco2: {
+    position: 'absolute',
+    top: 40,
+    left: 35,
+    fontSize: 8,
+    color: 'rgba(0,0,0,0.08)',
+  },
+  hydrationDeco3: {
+    position: 'absolute',
+    top: 65,
+    left: 15,
+    fontSize: 10,
+    color: 'rgba(0,0,0,0.1)',
+  },
+  hydrationDeco4: {
+    position: 'absolute',
+    top: 30,
+    left: 55,
+    fontSize: 6,
+    color: 'rgba(0,0,0,0.06)',
+  },
+  hydrationEmojiContainer: {
+    position: 'absolute',
+    right: -20,
+    top: '50%',
+    transform: [{ translateY: -35 }],
+  },
+  hydrationBigEmoji: {
+    fontSize: 70,
+    opacity: 0.2,
+  },
+  hydrationContent: {
+    flex: 1,
+    zIndex: 1,
+  },
+  hydrationCardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0c4a6e',
+  },
+  hydrationAddButton: {
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  hydrationValue: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#0c4a6e',
+    marginTop: spacing.sm,
+  },
+  hydrationProgressBg: {
+    width: '100%',
+    height: 6,
+    backgroundColor: 'rgba(255,255,255,0.5)',
+    borderRadius: borderRadius.full,
+    overflow: 'hidden',
+    marginTop: spacing.sm,
+  },
+  hydrationProgressFill: {
+    height: '100%',
+    backgroundColor: '#0284c7',
+    borderRadius: borderRadius.full,
+  },
+  hydrationStatus: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#0369a1',
+    marginTop: spacing.xs,
+  },
+  
+  // Premium Activity Card (Light amber)
+  activityCard: {
+    flex: 1,
+    backgroundColor: '#fef3c7',
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    overflow: 'hidden',
+    position: 'relative',
+    minHeight: 120,
+    shadowColor: '#f59e0b',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  activityDecorations: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  activityDeco1: {
+    position: 'absolute',
+    top: 20,
+    left: 15,
+    fontSize: 16,
+    color: 'rgba(0,0,0,0.1)',
+  },
+  activityDeco2: {
+    position: 'absolute',
+    top: 40,
+    left: 30,
+    fontSize: 14,
+    color: 'rgba(0,0,0,0.07)',
+  },
+  activityDeco3: {
+    position: 'absolute',
+    top: 30,
+    left: 55,
+    fontSize: 8,
+    color: 'rgba(0,0,0,0.12)',
+  },
+  activityEmojiContainer: {
+    position: 'absolute',
+    right: -20,
+    top: '50%',
+    transform: [{ translateY: -35 }],
+  },
+  activityBigEmoji: {
+    fontSize: 70,
+    opacity: 0.2,
+  },
+  activityContent: {
+    flex: 1,
+    zIndex: 1,
+  },
+  activityCardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#78350f',
+  },
+  activitySyncBadge: {
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activityValue: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#78350f',
+    marginTop: spacing.sm,
+  },
+  activityLabel: {
+    fontSize: 12,
+    color: '#92400e',
+    marginTop: 2,
+  },
+  activityStatsRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  activityStatText: {
+    fontSize: 12,
+    color: '#78350f',
+  },
+  
   sleepValueRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1195,15 +1879,6 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  activityValue: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  activityLabel: {
-    fontSize: 12,
-    color: colors.textSecondary,
   },
   activityEmpty: {
     alignItems: 'center',
@@ -1453,6 +2128,12 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.xl,
     padding: spacing.lg,
     gap: spacing.md,
+    // Premium shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 8,
   },
   modalTitle: {
     fontSize: 18,
