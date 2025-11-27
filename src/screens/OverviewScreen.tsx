@@ -13,6 +13,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import { healthAPI, foodAPI } from '../services/api';
 import { colors, spacing, borderRadius } from '../constants/theme';
@@ -45,6 +46,7 @@ type EnergyState = {
 
 export default function OverviewScreen({ navigation }: any) {
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const [healthData, setHealthData] = useState<any>(null);
   const [weeklyData, setWeeklyData] = useState<WeeklyData | null>(null);
   const [aiInsights, setAiInsights] = useState<any[]>([]);
@@ -58,7 +60,7 @@ export default function OverviewScreen({ navigation }: any) {
   const [pendingEnergy, setPendingEnergy] = useState<number>(5);
   const [pendingSleep, setPendingSleep] = useState<number>(7);
 
-  const hydrationTarget = 6;
+  const hydrationTarget = 8;
 
   useEffect(() => {
     loadData();
@@ -204,7 +206,7 @@ const getEnergyState = (score: number | null): EnergyState => {
   const weeklyDays = weeklyData?.weekData || [];
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top, backgroundColor: colors.background }]}>
       <LinearGradient colors={[colors.background, '#ffffff']} style={styles.gradient}>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
@@ -212,70 +214,79 @@ const getEnergyState = (score: number | null): EnergyState => {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.header}>
-            <View>
-              <Text style={styles.greeting}>
-                {`${getGreeting()}, ${user?.name || 'there'}`}
-              </Text>
-              <Text style={styles.headerTitle}>How your body is doing today</Text>
-              <Text style={styles.headerSubtitle}>Track your wellness and chat with AI for insights.</Text>
-            </View>
-          </View>
-
-          <View style={styles.heroCard}>
-            <View style={styles.lottieWrapper}>
-              <EmotionShowcase emotion={energyState.key} />
-            </View>
-            <Text style={styles.statusTitle}>{energyState.label}</Text>
-            <Text style={styles.statusNote}>{energyState.note}</Text>
-            <View style={styles.energyBarCard}>
-              <View style={styles.cardHeaderRow}>
-                <Text style={styles.sectionLabel}>ENERGY</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setPendingEnergy(energyScore ?? 5);
-                    setEnergyModalVisible(true);
-                  }}
-                >
-                  <Text style={styles.updateButtonText}>Update</Text>
-                </TouchableOpacity>
+            <View style={styles.headerRow}>
+              <View style={styles.headerLeft}>
+                <Text style={styles.greetingSmall}>{getGreeting()}</Text>
+                <Text style={styles.userName}>{user?.name?.split(' ')[0] || 'there'}</Text>
               </View>
-              <View style={styles.energyContentRow}>
-                <Text style={styles.energyEmoji}>{getEnergyEmoji(energyScore)}</Text>
-                <View style={{ flex: 1, gap: spacing.xs }}>
-                  <Text style={styles.energyValue}>
-                    {energyScore !== null ? `${energyScore} / 10` : '--'}
+              <View style={styles.headerRight}>
+                <View style={styles.dateContainer}>
+                  <Text style={styles.dateDay}>
+                    {new Date().toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()}
                   </Text>
-                  <View style={styles.energyTrack}>
-                    <LinearGradient
-                      colors={['#7dd3fc', '#38bdf8']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={[
-                        styles.energyTrackFill,
-                        { width: `${(Math.min(10, Math.max(0, energyScore || 0)) / 10) * 100}%` },
-                      ]}
-                    />
-                  </View>
-                  <Text style={[styles.energyLabel, { color: colors.success }]}>
-                    {energyState.label}
-                  </Text>
+                  <Text style={styles.dateNumber}>{new Date().getDate()}</Text>
                 </View>
               </View>
             </View>
+            <Text style={styles.headerTagline}>Your daily wellness overview</Text>
+          </View>
+
+          <View style={styles.heroCard}>
+            <View style={styles.cardHeaderRow}>
+              <View>
+                <Text style={styles.cardTitle}>Energy</Text>
+                <Text style={styles.cardSubtitle}>{energyState.label}</Text>
+              </View>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.actionButtonGreen]}
+                onPress={() => {
+                  setPendingEnergy(energyScore ?? 5);
+                  setEnergyModalVisible(true);
+                }}
+              >
+                <Text style={[styles.actionButtonText, { color: '#059669' }]}>Update</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.energyMainContent}>
+              <Text style={styles.energyEmoji}>{getEnergyEmoji(energyScore)}</Text>
+              
+              <View style={styles.energyScoreSection}>
+                <View style={styles.energyScoreRow}>
+                  <Text style={styles.energyScoreBig}>
+                    {energyScore !== null ? energyScore : '--'}
+                  </Text>
+                  <Text style={styles.energyScoreMax}>/ 10</Text>
+                </View>
+                <View style={styles.energyTrack}>
+                  <LinearGradient
+                    colors={energyScore && energyScore >= 7 ? ['#34d399', '#10b981'] : energyScore && energyScore <= 4 ? ['#fca5a5', '#f87171'] : ['#7dd3fc', '#38bdf8']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={[
+                      styles.energyTrackFill,
+                      { width: `${(Math.min(10, Math.max(0, energyScore || 0)) / 10) * 100}%` },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.energyNote}>{energyState.note}</Text>
+              </View>
+            </View>
+
             {energyScore === null && (
               <View style={styles.quickActions}>
                 <TouchableOpacity
-                  style={[styles.quickAction, { backgroundColor: '#ecfdf3' }]}
+                  style={[styles.quickAction, { backgroundColor: '#ecfdf5' }]}
                   onPress={() => handleQuickLog('energyScore', 6)}
                 >
                   <Ionicons name="flash-outline" size={16} color={colors.success} />
                   <Text style={styles.quickActionText}>Log Energy</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.quickAction, { backgroundColor: '#eff6ff' }]}
+                  style={[styles.quickAction, { backgroundColor: '#eef2ff' }]}
                   onPress={() => handleQuickLog('sleepHours', '7.0')}
                 >
-                  <Ionicons name="moon" size={16} color="#2563eb" />
+                  <Ionicons name="moon" size={16} color="#6366f1" />
                   <Text style={styles.quickActionText}>Log Sleep</Text>
                 </TouchableOpacity>
               </View>
@@ -286,8 +297,12 @@ const getEnergyState = (score: number | null): EnergyState => {
           <View style={styles.stripCard}>
             <View style={styles.cardHeaderRow}>
               <Text style={styles.cardTitle}>Today's Food</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Food')}>
-                <Text style={styles.linkText}>+ Add</Text>
+              <TouchableOpacity 
+                style={[styles.actionButton, styles.actionButtonGreen]}
+                onPress={() => navigation.navigate('Food')}
+              >
+                <Ionicons name="add" size={14} color="#059669" />
+                <Text style={[styles.actionButtonText, { color: '#059669' }]}>Add</Text>
               </TouchableOpacity>
             </View>
             
@@ -388,147 +403,176 @@ const getEnergyState = (score: number | null): EnergyState => {
             )}
           </View>
 
+            {/* Sleep & Weekly Patterns Row */}
             <View style={styles.cardGrid}>
               <View style={styles.stripCard}>
                 <View style={styles.cardHeaderRow}>
                   <Text style={styles.cardTitle}>Sleep</Text>
                   <TouchableOpacity
+                    style={[styles.actionButton, { backgroundColor: '#eef2ff' }]}
                     onPress={() => {
                       const currentSleep = healthData?.sleepHours ? parseFloat(healthData.sleepHours) : 7;
                       setPendingSleep(Number.isNaN(currentSleep) ? 7 : currentSleep);
                       setSleepModalVisible(true);
                     }}
                   >
-                    <Text style={styles.linkText}>Update</Text>
+                    <Text style={[styles.actionButtonText, { color: '#6366f1' }]}>Update</Text>
                   </TouchableOpacity>
                 </View>
-              {healthData?.sleepHours ? (
-                <>
-                  <View style={styles.rowBetween}>
-                    <Text style={styles.mainValue}>{healthData.sleepHours} hrs</Text>
-                    <View style={styles.badge}>
-                      <Ionicons name="moon" size={14} color="#1d4ed8" />
-                      <Text style={styles.badgeText}>
-                        {parseFloat(healthData.sleepHours) >= 7 ? 'Great sleep' : 'Try for more rest'}
-                      </Text>
+                {healthData?.sleepHours ? (
+                  <>
+                    <View style={styles.sleepValueRow}>
+                      <Ionicons name="moon" size={20} color="#6366f1" />
+                      <Text style={styles.mainValue}>{healthData.sleepHours} hrs</Text>
                     </View>
-                  </View>
-                  <View style={styles.divider} />
-                </>
-              ) : (
-                <Text style={styles.mutedText}>Not logged yet</Text>
-              )}
-              <View style={{ marginTop: spacing.sm }}>
-                <Text style={styles.subLabel}>This week</Text>
-                {weeklyDays.filter((d) => d.sleepHours !== null && d.sleepHours !== undefined).length > 0 ? (
-                  weeklyDays.map((day, idx) =>
-                    day.sleepHours !== null && day.sleepHours !== undefined ? (
-                      <View key={`${day.dayName}-${idx}`} style={styles.weekRow}>
-                        <Text style={styles.weekDay}>{day.dayName}</Text>
-                        <Text style={styles.weekValue}>{day.sleepHours} hrs</Text>
-                      </View>
-                    ) : null
-                  )
+                    <Text style={[styles.subLabel, { color: parseFloat(healthData.sleepHours) >= 7 ? colors.success : colors.warning }]}>
+                      {parseFloat(healthData.sleepHours) >= 7 ? '✓ Great sleep' : 'Try for more rest'}
+                    </Text>
+                  </>
                 ) : (
-                  <Text style={styles.mutedText}>No sleep logged this week</Text>
+                  <View style={styles.sleepEmptyState}>
+                    <Ionicons name="moon-outline" size={24} color={colors.textLight} />
+                    <Text style={styles.mutedText}>Not logged</Text>
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.stripCard}>
+                <View style={styles.cardHeaderRow}>
+                  <Text style={styles.cardTitle}>This Week</Text>
+                  <Text style={styles.subLabel}>{weeklyData?.dataPoints || 0} days</Text>
+                </View>
+                {weeklyData?.avgEnergy ? (
+                  <>
+                    <View style={styles.weeklyStatRow}>
+                      <Text style={styles.weeklyStatValue}>{weeklyData.avgEnergy.toFixed(1)}</Text>
+                      <Text style={styles.weeklyStatLabel}>avg energy</Text>
+                    </View>
+                    {(weeklyData?.bestDay || weeklyData?.worstDay) && (
+                      <View style={styles.weeklyHighLow}>
+                        {weeklyData?.bestDay && (
+                          <Text style={styles.weeklyHighLowText}>
+                            ↑ {weeklyData.bestDay.day} ({weeklyData.bestDay.energy})
+                          </Text>
+                        )}
+                        {weeklyData?.worstDay && (
+                          <Text style={styles.weeklyHighLowText}>
+                            ↓ {weeklyData.worstDay.day} ({weeklyData.worstDay.energy})
+                          </Text>
+                        )}
+                      </View>
+                    )}
+                  </>
+                ) : (
+                  <View style={styles.sleepEmptyState}>
+                    <Ionicons name="analytics-outline" size={24} color={colors.textLight} />
+                    <Text style={styles.mutedText}>No data yet</Text>
+                  </View>
                 )}
               </View>
             </View>
 
-            <View style={styles.stripCard}>
-              <View style={styles.cardHeaderRow}>
-                <Text style={styles.cardTitle}>Hydration</Text>
-                <TouchableOpacity
-                  style={styles.iconButton}
-                  onPress={() => handleQuickLog('hydrationGlasses', hydrationGlasses + 1)}
-                >
-                  <Ionicons name="add" size={16} color="#0ea5e9" />
-                  <Text style={styles.iconButtonText}>+1</Text>
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.mainValue}>
-                {hydrationGlasses} of {hydrationTarget} glasses
-              </Text>
-              <Text style={styles.subLabel}>
-                {Math.round((hydrationGlasses / hydrationTarget) * 100)}% to goal
-              </Text>
-              <View style={styles.cupsRow}>
-                {Array.from({ length: hydrationTarget }).map((_, idx) => (
-                  <HydrationCup key={idx} filled={idx < hydrationGlasses} label={`Glass ${idx + 1}`} />
-                ))}
-              </View>
-              {hydrationGlasses < hydrationTarget && (
-                <View style={styles.badgeSky}>
-                  <Ionicons name="water" size={14} color="#0284c7" />
-                  <Text style={styles.badgeText}>
-                    {hydrationTarget - hydrationGlasses} more to reach your goal
+            {/* Hydration & Activity Row */}
+            <View style={styles.cardGrid}>
+              <View style={styles.stripCard}>
+                <View style={styles.cardHeaderRow}>
+                  <Text style={styles.cardTitle}>Hydration</Text>
+                  <TouchableOpacity
+                    style={[styles.actionButton, styles.actionButtonCyan]}
+                    onPress={() => handleQuickLog('hydrationGlasses', hydrationGlasses + 1)}
+                  >
+                    <Ionicons name="add" size={16} color="#0891b2" />
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.compactValueRow}>
+                  <Text style={styles.compactValue}>{hydrationGlasses}</Text>
+                  <Text style={styles.compactUnit}>/ {hydrationTarget}</Text>
+                </View>
+                {/* Water drop indicators */}
+                <View style={styles.waterDropsRow}>
+                  {Array.from({ length: hydrationTarget }).map((_, idx) => (
+                    <Ionicons 
+                      key={idx} 
+                      name={idx < hydrationGlasses ? "water" : "water-outline"} 
+                      size={14} 
+                      color={idx < hydrationGlasses ? "#0ea5e9" : "#cbd5e1"} 
+                    />
+                  ))}
+                </View>
+                <View style={styles.hydrationFooter}>
+                  <Text style={styles.hydrationPercent}>
+                    {Math.round((hydrationGlasses / hydrationTarget) * 100)}%
+                  </Text>
+                  <Text style={[styles.subLabel, { color: hydrationGlasses >= hydrationTarget ? colors.success : colors.textSecondary }]}>
+                    {hydrationGlasses >= hydrationTarget ? '✓ Goal reached!' : `${hydrationTarget - hydrationGlasses} more`}
                   </Text>
                 </View>
-              )}
-            </View>
+              </View>
 
-            {/* Activity Card - Steps & Heart Rate from Health Apps */}
-            <View style={styles.stripCard}>
-              <View style={styles.cardHeaderRow}>
-                <Text style={styles.cardTitle}>Activity</Text>
-                {(healthData?.steps || healthData?.heartRate) && (
-                  <View style={styles.syncBadge}>
-                    <Ionicons name="sync" size={12} color="#059669" />
-                    <Text style={styles.syncBadgeText}>Synced</Text>
+              <View style={styles.stripCard}>
+                <View style={styles.cardHeaderRow}>
+                  <Text style={styles.cardTitle}>Activity</Text>
+                  {(healthData?.steps || healthData?.heartRate) && (
+                    <Ionicons name="checkmark-circle" size={16} color="#059669" />
+                  )}
+                </View>
+                {healthData?.steps || healthData?.heartRate || healthData?.activeCalories ? (
+                  <>
+                    <View style={styles.compactValueRow}>
+                      <Ionicons name="footsteps" size={20} color="#d97706" />
+                      <Text style={styles.compactValue}>
+                        {healthData?.steps?.toLocaleString() || '0'}
+                      </Text>
+                      <Text style={styles.compactUnit}>steps</Text>
+                    </View>
+                    <View style={styles.activityMiniStats}>
+                      {healthData?.heartRate && (
+                        <View style={styles.activityMiniItem}>
+                          <Ionicons name="heart" size={12} color="#dc2626" />
+                          <Text style={styles.activityMiniText}>{healthData.heartRate}</Text>
+                        </View>
+                      )}
+                      {healthData?.activeCalories && (
+                        <View style={styles.activityMiniItem}>
+                          <Ionicons name="flame" size={12} color="#f59e0b" />
+                          <Text style={styles.activityMiniText}>{healthData.activeCalories}</Text>
+                        </View>
+                      )}
+                    </View>
+                  </>
+                ) : (
+                  <View style={styles.sleepEmptyState}>
+                    <Ionicons name="fitness-outline" size={24} color={colors.textLight} />
+                    <Text style={styles.mutedText}>No data</Text>
                   </View>
                 )}
               </View>
-              {healthData?.steps || healthData?.heartRate || healthData?.activeCalories ? (
-                <View style={styles.activityGrid}>
-                  {healthData?.steps && (
-                    <View style={styles.activityItem}>
-                      <View style={[styles.activityIconBg, { backgroundColor: '#fef3c7' }]}>
-                        <Ionicons name="footsteps" size={20} color="#d97706" />
-                      </View>
-                      <Text style={styles.activityValue}>{healthData.steps.toLocaleString()}</Text>
-                      <Text style={styles.activityLabel}>Steps</Text>
-                    </View>
-                  )}
-                  {healthData?.heartRate && (
-                    <View style={styles.activityItem}>
-                      <View style={[styles.activityIconBg, { backgroundColor: '#fee2e2' }]}>
-                        <Ionicons name="heart" size={20} color="#dc2626" />
-                      </View>
-                      <Text style={styles.activityValue}>{healthData.heartRate}</Text>
-                      <Text style={styles.activityLabel}>BPM</Text>
-                    </View>
-                  )}
-                  {healthData?.activeCalories && (
-                    <View style={styles.activityItem}>
-                      <View style={[styles.activityIconBg, { backgroundColor: '#dbeafe' }]}>
-                        <Ionicons name="flame" size={20} color="#2563eb" />
-                      </View>
-                      <Text style={styles.activityValue}>{healthData.activeCalories}</Text>
-                      <Text style={styles.activityLabel}>Cal</Text>
-                    </View>
-                  )}
-                </View>
-              ) : (
-                <View style={styles.activityEmpty}>
-                  <Ionicons name="watch-outline" size={32} color={colors.textLight} />
-                  <Text style={styles.mutedText}>Connect Apple Health or Health Connect in Settings to see activity data</Text>
-                </View>
+            </View>
+
+          {/* Unified AI Insights Card */}
+          <View style={styles.fullCard}>
+            <View style={styles.cardHeaderRow}>
+              <View style={styles.aiInsightsHeader}>
+                <Ionicons name="sparkles" size={18} color={colors.primary} />
+                <Text style={styles.cardTitle}>AI Insights</Text>
+              </View>
+              {(energyScore || healthData?.sleepHours || hydrationGlasses > 0) && (
+                <TouchableOpacity 
+                  style={[styles.actionButton, styles.actionButtonGreen, analyzing && { opacity: 0.5 }]}
+                  onPress={runAnalysis} 
+                  disabled={analyzing}
+                >
+                  <Ionicons name={analyzing ? "sync" : "refresh"} size={14} color="#059669" />
+                  {!analyzing && <Text style={[styles.actionButtonText, { color: '#059669' }]}>Refresh</Text>}
+                </TouchableOpacity>
               )}
             </View>
 
-            <View style={styles.stripCard}>
-              <View style={styles.cardHeaderRow}>
-                <Text style={styles.cardTitle}>AI Health Insights</Text>
-                {(energyScore || healthData?.sleepHours || hydrationGlasses > 0) && (
-                  <TouchableOpacity onPress={runAnalysis} disabled={analyzing}>
-                    <Text style={[styles.linkText, analyzing && { opacity: 0.5 }]}>
-                      {analyzing ? 'Analyzing...' : 'Analyze now'}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-              {analyzedSymptoms.length > 0 ? (
-                analyzedSymptoms.map((symptom: any, idx: number) => (
+            {/* Detected Symptoms Section */}
+            {analyzedSymptoms.length > 0 ? (
+              <>
+                <Text style={styles.aiSectionLabel}>Detected patterns</Text>
+                {analyzedSymptoms.map((symptom: any, idx: number) => (
                   <View key={idx} style={styles.symptomRow}>
                     <View
                       style={[
@@ -555,55 +599,12 @@ const getEnergyState = (score: number | null): EnergyState => {
                         : 'Monitoring'}
                     </Text>
                   </View>
-                ))
-              ) : (
-                <Text style={styles.mutedText}>
-                  Log energy, sleep, or hydrate to unlock AI health insights.
-                </Text>
-              )}
-            </View>
-          </View>
-
-          <View style={styles.fullCard}>
-            <View style={styles.cardHeaderRow}>
-              <Text style={styles.cardTitle}>Weekly patterns</Text>
-              <Text style={styles.subLabel}>
-                {weeklyData?.dataPoints || 0} entries this week
-              </Text>
-            </View>
-            {weeklyData?.patterns && weeklyData.patterns.length > 0 ? (
-              <View style={styles.patternChips}>
-                {weeklyData.patterns.map((pattern, idx) => (
-                  <View key={idx} style={styles.patternChip}>
-                    <Text style={styles.patternText}>{pattern.description}</Text>
-                  </View>
                 ))}
-              </View>
-            ) : (
-              <Text style={styles.mutedText}>No clear patterns yet</Text>
-            )}
-            {(weeklyData?.bestDay || weeklyData?.worstDay) && (
-              <View style={styles.rowBetween}>
-                {weeklyData?.bestDay && (
-                  <Text style={styles.subLabel}>
-                    Best: {weeklyData.bestDay.day} ({weeklyData.bestDay.energy}/10)
-                  </Text>
-                )}
-                {weeklyData?.worstDay && (
-                  <Text style={styles.subLabel}>
-                    Lowest: {weeklyData.worstDay.day} ({weeklyData.worstDay.energy}/10)
-                  </Text>
-                )}
-              </View>
-            )}
-            <WeeklyEnergyChart data={weeklyDays} />
-          </View>
 
-          {analyzedSymptoms.length > 0 && (
-            <View style={styles.cardGrid}>
-              <View style={styles.stripCard}>
-                <Text style={styles.cardTitle}>What may be affecting you</Text>
-                <View style={{ marginTop: spacing.sm, gap: spacing.xs }}>
+                {/* What may be affecting you */}
+                <View style={styles.aiSectionDivider} />
+                <Text style={styles.aiSectionLabel}>What may be affecting you</Text>
+                <View style={styles.chipsContainer}>
                   {energyScore !== null && energyScore < 6 && (
                     <Chip color="#f87171" text={`Low energy ${energyScore}/10`} />
                   )}
@@ -613,15 +614,18 @@ const getEnergyState = (score: number | null): EnergyState => {
                   {hydrationGlasses < 4 && (
                     <Chip color="#0ea5e9" text={`Under-hydrated (${hydrationGlasses}/${hydrationTarget})`} />
                   )}
-                  {analyzedSymptoms.filter((s: any) => s.confidence === 'high').length === 0 && (
+                  {analyzedSymptoms.filter((s: any) => s.confidence === 'high').length === 0 &&
+                    energyScore !== null && energyScore >= 6 &&
+                    (!healthData?.sleepHours || parseFloat(healthData.sleepHours) >= 7) &&
+                    hydrationGlasses >= 4 && (
                     <Chip color="#34d399" text="No major concerns detected" />
                   )}
                 </View>
-              </View>
 
-              <View style={styles.stripCard}>
-                <Text style={styles.cardTitle}>AI recommendations</Text>
-                <View style={{ marginTop: spacing.sm, gap: spacing.xs }}>
+                {/* AI Recommendations */}
+                <View style={styles.aiSectionDivider} />
+                <Text style={styles.aiSectionLabel}>Recommendations</Text>
+                <View style={styles.chipsContainer}>
                   {energyScore !== null && energyScore < 6 && (
                     <Chip color="#34d399" text="Light movement & fresh air" />
                   )}
@@ -631,26 +635,17 @@ const getEnergyState = (score: number | null): EnergyState => {
                   {hydrationGlasses < 4 && (
                     <Chip color="#0ea5e9" text="Increase water intake" />
                   )}
-                  <Chip color="#f59e0b" text="Chat with AI for personalized tips" />
                 </View>
+              </>
+            ) : (
+              <View style={styles.aiEmptyState}>
+                <Ionicons name="analytics-outline" size={32} color={colors.textLight} />
+                <Text style={styles.mutedText}>
+                  Log energy, sleep, or hydration to unlock AI insights.
+                </Text>
               </View>
-            </View>
-          )}
-
-          <TouchableOpacity style={styles.chatButton} onPress={() => navigation.navigate('Chat')}>
-            <LinearGradient
-              colors={[colors.gradientStart, colors.gradientEnd]}
-              style={styles.chatGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-            >
-              <Ionicons name="chatbubble-ellipses-outline" size={32} color="#ffffff" />
-              <View style={styles.chatTextContainer}>
-                <Text style={styles.chatButtonTitle}>Chat with AI Assistant</Text>
-                <Text style={styles.chatButtonSubtitle}>Get personalized wellness insights</Text>
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
+            )}
+          </View>
 
           <TouchableOpacity
             style={styles.pricingCard}
@@ -740,17 +735,6 @@ const getEnergyState = (score: number | null): EnergyState => {
   );
 }
 
-function HydrationCup({ filled, label }: { filled: boolean; label: string }) {
-  return (
-    <View style={styles.cupContainer}>
-      <View style={[styles.cup, filled && styles.cupFilled]}>
-        <View style={[styles.cupFill, filled && styles.cupFillActive]} />
-      </View>
-      <Text style={[styles.cupLabel, filled && { color: '#0ea5e9' }]}>{label.replace('Glass ', 'G')}</Text>
-    </View>
-  );
-}
-
 function Chip({ color, text }: { color: string; text: string }) {
   return (
     <View style={[styles.chip, { backgroundColor: `${color}20` }]}>
@@ -804,44 +788,103 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: spacing.lg,
-    paddingTop: 70,
+    paddingTop: spacing.md,
     paddingBottom: spacing.xxl + 80,
     gap: spacing.md,
   },
   header: {
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
+    gap: spacing.sm,
   },
-  greeting: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: spacing.xs,
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.text,
-    lineHeight: 24,
+  headerLeft: {
+    flex: 1,
   },
-  headerSubtitle: {
-    fontSize: 16,
+  headerRight: {
+    alignItems: 'flex-end',
+  },
+  greetingSmall: {
+    fontSize: 15,
     fontWeight: '500',
     color: colors.textSecondary,
-    lineHeight: 22,
+    letterSpacing: 0.3,
+  },
+  userName: {
+    fontSize: 34,
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: -0.5,
+    marginTop: 2,
+  },
+  dateContainer: {
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.lg,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    alignItems: 'center',
+    minWidth: 52,
+  },
+  dateDay: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.8)',
+    letterSpacing: 1,
+  },
+  dateNumber: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#ffffff',
+    marginTop: -2,
+  },
+  headerTagline: {
+    fontSize: 14,
+    fontWeight: '400',
+    color: colors.textLight,
+    marginTop: spacing.xs,
   },
   heroCard: {
-    backgroundColor: colors.glass,
+    backgroundColor: '#ffffff',
     borderRadius: borderRadius.xl,
     padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
-    gap: spacing.sm,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    paddingTop: 0,
+    gap: spacing.md,
+    // Premium shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 5,
   },
-  lottieWrapper: {
-    marginTop: -20,
+  energyMainContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.lg,
+    width: '100%',
+  },
+  energyEmoji: {
+    fontSize: 80,
+  },
+  energyScoreSection: {
+    flex: 1,
+    gap: spacing.sm,
+  },
+  energyScoreRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 4,
+  },
+  energyScoreBig: {
+    fontSize: 48,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  energyScoreMax: {
+    fontSize: 20,
+    fontWeight: '500',
+    color: colors.textLight,
   },
   quickActions: {
     flexDirection: 'row',
@@ -865,15 +908,6 @@ const styles = StyleSheet.create({
   energyCard: {
     width: '100%',
     alignItems: 'center',
-  },
-  energyBarCard: {
-    width: '100%',
-    backgroundColor: '#ffffff',
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
-    gap: spacing.sm,
   },
   energyHeader: {
     flexDirection: 'row',
@@ -906,34 +940,6 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderRadius: borderRadius.full,
   },
-  statusTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.text,
-    textAlign: 'center',
-  },
-  statusNote: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-  energyScoreText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#ffffff',
-  },
-  energyLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  energyContentRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  energyEmoji: {
-    fontSize: 32,
-  },
   energyTrack: {
     width: '100%',
     height: 12,
@@ -945,48 +951,40 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: borderRadius.full,
   },
-  energyValue: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  energyBar: {
-    width: 70,
-    height: 8,
-    backgroundColor: 'rgba(255,255,255,0.4)',
-    borderRadius: borderRadius.full,
-  },
-  energyFill: {
-    height: '100%',
-    borderRadius: borderRadius.full,
-    backgroundColor: '#ffffff',
-  },
   energyNote: {
-    fontSize: 13,
+    fontSize: 12,
+    fontWeight: '400',
     color: colors.textSecondary,
+    marginTop: 2,
   },
   cardGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: spacing.md,
   },
   stripCard: {
     flex: 1,
-    minWidth: '48%',
-    backgroundColor: colors.glass,
+    backgroundColor: '#ffffff',
     borderRadius: borderRadius.lg,
     padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
     gap: spacing.xs,
+    // Premium shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
   },
   fullCard: {
-    backgroundColor: colors.glass,
+    backgroundColor: '#ffffff',
     borderRadius: borderRadius.xl,
     padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
     gap: spacing.sm,
+    // Premium shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
   },
   cardHeaderRow: {
     flexDirection: 'row',
@@ -998,6 +996,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: colors.text,
+  },
+  cardSubtitle: {
+    fontSize: 13,
+    fontWeight: '400',
+    color: colors.textSecondary,
+    marginTop: 2,
   },
   linkText: {
     fontSize: 12,
@@ -1060,6 +1064,103 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.text,
   },
+  // Sleep card compact styles
+  sleepValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  sleepEmptyState: {
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    gap: spacing.xs,
+  },
+  // Weekly patterns compact styles
+  weeklyStatRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+  },
+  weeklyStatValue: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  weeklyStatLabel: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  weeklyHighLow: {
+    marginTop: spacing.sm,
+    gap: 2,
+  },
+  weeklyHighLowText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  // Compact card styles (shared)
+  compactValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  compactValue: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  compactUnit: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginLeft: -4,
+  },
+  miniProgressBar: {
+    height: 4,
+    backgroundColor: '#e2e8f0',
+    borderRadius: 2,
+    marginTop: spacing.sm,
+    overflow: 'hidden',
+  },
+  miniProgressFill: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  // Activity mini stats
+  activityMiniStats: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginTop: spacing.sm,
+  },
+  activityMiniItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  activityMiniText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  // Hydration extra styles
+  waterDropsRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: spacing.sm,
+  },
+  hydrationFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: spacing.sm,
+  },
+  hydrationPercent: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#0ea5e9',
+  },
   mutedText: {
     fontSize: 12,
     color: colors.textLight,
@@ -1109,19 +1210,45 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     gap: spacing.sm,
   },
+  // Unified action button styles
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: borderRadius.full,
+    minWidth: 36,
+    minHeight: 28,
+  },
+  actionButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  // Specific action button colors
+  actionButtonGreen: {
+    backgroundColor: '#ecfdf5',
+  },
+  actionButtonBlue: {
+    backgroundColor: '#eff6ff',
+  },
+  actionButtonCyan: {
+    backgroundColor: '#ecfeff',
+  },
   iconButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    backgroundColor: '#e0f2fe',
-    paddingHorizontal: spacing.sm,
+    backgroundColor: '#ecfeff',
+    paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: borderRadius.full,
   },
   iconButtonText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#0284c7',
+    color: '#0891b2',
   },
   cupsRow: {
     flexDirection: 'row',
@@ -1190,6 +1317,36 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textLight,
   },
+  // AI Insights unified card styles
+  aiInsightsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  aiSectionLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  aiSectionDivider: {
+    height: 1,
+    backgroundColor: colors.glassBorder,
+    marginVertical: spacing.md,
+  },
+  chipsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  aiEmptyState: {
+    alignItems: 'center',
+    paddingVertical: spacing.lg,
+    gap: spacing.sm,
+  },
   fullWidth: {
     width: '100%',
   },
@@ -1248,39 +1405,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
-  chatButton: {
-    borderRadius: borderRadius.xl,
-    overflow: 'hidden',
-    marginVertical: spacing.sm,
-  },
-  chatGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.lg,
-    gap: spacing.md,
-  },
-  chatTextContainer: {
-    flex: 1,
-  },
-  chatButtonTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#ffffff',
-    marginBottom: 2,
-  },
-  chatButtonSubtitle: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.9)',
-  },
   pricingCard: {
     backgroundColor: '#fff7ed',
     borderRadius: borderRadius.lg,
     padding: spacing.md,
-    borderWidth: 1,
-    borderColor: '#fed7aa',
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+    // Premium shadow
+    shadowColor: '#f59e0b',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 2,
   },
   pricingText: {
     flex: 1,

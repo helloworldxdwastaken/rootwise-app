@@ -107,7 +107,6 @@ const styles = StyleSheet.create({
   },
   appWrapper: {
     flex: 1,
-    paddingTop: 15,
     backgroundColor: '#fdf8f3',
   },
   errorHeader: {
