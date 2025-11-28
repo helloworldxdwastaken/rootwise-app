@@ -500,7 +500,7 @@ const styles = StyleSheet.create({
   headerIcon: {
     width: 32,
     height: 32,
-    borderRadius: 10,
+    borderRadius: 16,
     overflow: 'hidden',
   },
   headerIconImage: {

@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, TextInput, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthProvider } from './src/contexts/AuthContext';
@@ -10,6 +10,13 @@ import {
   scheduleDailyReminders,
   areRemindersEnabled 
 } from './src/services/notifications';
+import { 
+  useFonts, 
+  Poppins_400Regular, 
+  Poppins_500Medium, 
+  Poppins_600SemiBold, 
+  Poppins_700Bold 
+} from '@expo-google-fonts/poppins';
 
 // Error Boundary to catch crashes
 class ErrorBoundary extends React.Component<
@@ -59,14 +66,38 @@ class ErrorBoundary extends React.Component<
 }
 
 export default function App() {
+  const [fontsLoaded] = useFonts({
+    Poppins_400Regular,
+    Poppins_500Medium,
+    Poppins_600SemiBold,
+    Poppins_700Bold,
+  });
+
   // Log startup
-  React.useEffect(() => {
+  useEffect(() => {
     console.log('App started successfully');
     console.log('Environment:', __DEV__ ? 'Development' : 'Production');
   }, []);
 
+  // Apply global font defaults once loaded
+  useEffect(() => {
+    if (fontsLoaded) {
+      Text.defaultProps = Text.defaultProps || {};
+      Text.defaultProps.style = [
+        Text.defaultProps.style,
+        { fontFamily: 'Poppins_400Regular' },
+      ].filter(Boolean);
+
+      TextInput.defaultProps = TextInput.defaultProps || {};
+      TextInput.defaultProps.style = [
+        TextInput.defaultProps.style,
+        { fontFamily: 'Poppins_400Regular' },
+      ].filter(Boolean);
+    }
+  }, [fontsLoaded]);
+
   // Set up notifications on app start
-  React.useEffect(() => {
+  useEffect(() => {
     const setupNotifications = async () => {
       // Request permissions
       const token = await requestNotificationPermissions();
@@ -83,6 +114,10 @@ export default function App() {
     
     setupNotifications();
   }, []);
+
+  if (!fontsLoaded) {
+    return null;
+  }
 
   return (
     <ErrorBoundary>
