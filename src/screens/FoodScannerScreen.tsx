@@ -60,7 +60,6 @@ export default function FoodScannerScreen() {
   const [isEstimated, setIsEstimated] = useState(false);
   const [estimating, setEstimating] = useState(false);
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  const floatAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -80,28 +79,6 @@ export default function FoodScannerScreen() {
       }),
     ]).start();
   }, []);
-
-  // Floating animation for hero icon
-  useEffect(() => {
-    if (!image) {
-      const float = Animated.loop(
-        Animated.sequence([
-          Animated.timing(floatAnim, {
-            toValue: -8,
-            duration: 2000,
-            useNativeDriver: true,
-          }),
-          Animated.timing(floatAnim, {
-            toValue: 0,
-            duration: 2000,
-            useNativeDriver: true,
-          }),
-        ])
-      );
-      float.start();
-      return () => float.stop();
-    }
-  }, [image]);
 
   // Pulse animation for analyze button
   useEffect(() => {
@@ -242,7 +219,7 @@ export default function FoodScannerScreen() {
                 setAnalysis(null);
               },
             },
-            { text: 'Done', style: 'cancel' },
+            { text: 'Done', style: 'cancel', onPress: reset },
           ]
         );
       } else {
@@ -379,7 +356,7 @@ export default function FoodScannerScreen() {
               text: 'Log Another',
               onPress: reset,
             },
-            { text: 'Done', style: 'cancel' },
+            { text: 'Done', style: 'cancel', onPress: reset },
           ]
         );
       } else {
@@ -418,22 +395,11 @@ export default function FoodScannerScreen() {
           <Animated.View style={[styles.heroContainer, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
             {/* Hero Section */}
             <View style={styles.heroSection}>
-              <Animated.View style={[styles.heroIconContainer, { transform: [{ translateY: floatAnim }] }]}>
-                <LinearGradient
-                  colors={[colors.primary, '#1a5c45', colors.primaryLight]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.heroIconGradient}
-                >
+              <View style={styles.heroIconContainer}>
+                <View style={styles.heroIconGradient}>
                   <Ionicons name="restaurant" size={56} color="#fff" />
-                </LinearGradient>
-                <View style={styles.sparkle1}>
-                  <Ionicons name="sparkles" size={20} color={colors.accent} />
                 </View>
-                <View style={styles.sparkle2}>
-                  <Ionicons name="sparkles" size={16} color={colors.primaryLight} />
-                </View>
-              </Animated.View>
+              </View>
               
               <Text style={styles.heroTitle}>AI Food Scanner</Text>
               <Text style={styles.heroSubtitle}>
@@ -882,21 +848,12 @@ const styles = StyleSheet.create({
     borderRadius: 36,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: colors.primary,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.35,
     shadowRadius: 20,
     elevation: 15,
-  },
-  sparkle1: {
-    position: 'absolute',
-    top: -8,
-    right: -8,
-  },
-  sparkle2: {
-    position: 'absolute',
-    bottom: 8,
-    left: -12,
   },
   heroTitle: {
     fontSize: 32,
@@ -1206,7 +1163,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    backgroundColor: colors.success,
+    backgroundColor: colors.primary,
     paddingVertical: 16,
     borderRadius: 14,
     marginBottom: 12,
@@ -1433,4 +1390,3 @@ const styles = StyleSheet.create({
     borderColor: `${colors.success}30`,
   },
 });
-

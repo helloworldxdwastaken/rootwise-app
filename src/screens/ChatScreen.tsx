@@ -9,6 +9,7 @@ import {
   Platform,
   KeyboardAvoidingView,
   Animated,
+  Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -339,9 +340,12 @@ export default function ChatScreen({ navigation }: any) {
     return (
       <View style={[styles.messageRow, isUser && styles.messageRowUser]}>
         {!isUser && (
-          <LinearGradient colors={['#34d399', '#059669']} style={styles.avatar}>
-            <Ionicons name="sparkles" size={12} color="#fff" />
-            </LinearGradient>
+          <View style={styles.avatar}>
+            <Image
+              source={require('../../assets/icon-120.png')}
+              style={styles.avatarImage}
+            />
+          </View>
         )}
         <View style={[styles.bubble, isUser ? styles.bubbleUser : styles.bubbleAI]}>
           {isUser ? (
@@ -368,9 +372,12 @@ export default function ChatScreen({ navigation }: any) {
     if (!sending) return null;
     return (
       <View style={styles.messageRow}>
-        <LinearGradient colors={['#34d399', '#059669']} style={styles.avatar}>
-          <Ionicons name="sparkles" size={12} color="#fff" />
-        </LinearGradient>
+          <View style={styles.avatar}>
+            <Image
+              source={require('../../assets/icon-120.png')}
+              style={styles.avatarImage}
+            />
+          </View>
         <View style={[styles.bubble, styles.bubbleAI, styles.thinkingBubble]}>
           <TypingDots />
         </View>
@@ -390,9 +397,12 @@ export default function ChatScreen({ navigation }: any) {
         >
             <Ionicons name="arrow-back" size={24} color={colors.primary} />
           </TouchableOpacity>
-        <LinearGradient colors={['#34d399', '#059669']} style={styles.headerIcon}>
-          <Ionicons name="sparkles" size={14} color="#fff" />
-        </LinearGradient>
+        <View style={styles.headerIcon}>
+          <Image
+            source={require('../../assets/icon-120.png')}
+            style={styles.headerIconImage}
+          />
+        </View>
         <View style={styles.headerTextWrap}>
             <Text style={styles.headerTitle}>Wellness Assistant</Text>
           <Text style={styles.headerSubtitle}>Ask about your health data</Text>
@@ -491,8 +501,12 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  headerIconImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
   },
   headerTextWrap: {
     flex: 1,
@@ -530,8 +544,12 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
   },
   avatarUser: {
     width: 28,
