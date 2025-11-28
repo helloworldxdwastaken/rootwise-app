@@ -1,14 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import LottieView from 'lottie-react-native';
 
-const EMOTION_ASSETS = {
-  mindfull_chill: require('../../assets/emotions/mindfull_chill.json'),
-  productive: require('../../assets/emotions/productive.json'),
-  tired_low: require('../../assets/emotions/tired_low.json'),
-} as const;
-
-export type EmotionKey = keyof typeof EMOTION_ASSETS;
+// Keep the same keys so existing usages continue to work
+export type EmotionKey = 'mindfull_chill' | 'productive' | 'tired_low';
 
 type EmotionShowcaseProps = {
   emotion: EmotionKey;
@@ -17,16 +11,42 @@ type EmotionShowcaseProps = {
 };
 
 export function EmotionShowcase({ emotion, label, note }: EmotionShowcaseProps) {
-  const source = EMOTION_ASSETS[emotion] || EMOTION_ASSETS.mindfull_chill;
+  const getEmoji = () => {
+    switch (emotion) {
+      case 'productive':
+        return '🚀';
+      case 'tired_low':
+        return '😴';
+      case 'mindfull_chill':
+      default:
+        return '😊';
+    }
+  };
+
+  const getBackground = () => {
+    switch (emotion) {
+      case 'productive':
+        return ['#0f766e', '#22c55e'];
+      case 'tired_low':
+        return ['#f97316', '#ef4444'];
+      case 'mindfull_chill':
+      default:
+        return ['#4f46e5', '#22c55e'];
+    }
+  };
+
+  const [startColor, endColor] = getBackground();
 
   return (
     <View style={styles.container}>
-      <LottieView
-        source={source}
-        autoPlay
-        loop
-        style={styles.animation}
-      />
+      <View
+        style={[
+          styles.emojiContainer,
+          { backgroundColor: startColor, shadowColor: endColor },
+        ]}
+      >
+        <Text style={styles.emoji}>{getEmoji()}</Text>
+      </View>
       {(label || note) && (
         <View style={styles.caption}>
           {label && <Text style={styles.label}>{label}</Text>}
@@ -44,11 +64,15 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   emojiContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 140,
+    height: 140,
+    borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 10,
   },
   emoji: {
     fontSize: 64,
