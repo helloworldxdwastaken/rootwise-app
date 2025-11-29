@@ -44,7 +44,7 @@ def create_splash(filename):
     img.save(filename, 'PNG')
     print(f"✅ Created {filename}")
 
-# Create assets directory if it doesn't exist
+# Create assets directory if it doesn't exist. 
 os.makedirs('assets', exist_ok=True)
 
 # Generate all required assets
