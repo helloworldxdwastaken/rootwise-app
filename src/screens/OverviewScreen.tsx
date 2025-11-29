@@ -59,6 +59,9 @@ export default function OverviewScreen({ navigation }: any) {
   const [sleepModalVisible, setSleepModalVisible] = useState(false);
   const [pendingEnergy, setPendingEnergy] = useState<number>(5);
   const [pendingSleep, setPendingSleep] = useState<number>(7);
+  const [notificationModalVisible, setNotificationModalVisible] = useState(false);
+  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
+  const [lastSeenNotificationCount, setLastSeenNotificationCount] = useState(0);
 
   const hydrationTarget = 8;
 
@@ -99,6 +102,14 @@ export default function OverviewScreen({ navigation }: any) {
       setRefreshing(false);
     }
   };
+
+  useEffect(() => {
+    // Only mark unread when new notifications arrive beyond what has been viewed
+    const currentCount = aiInsights?.length || 0;
+    if (currentCount > lastSeenNotificationCount) {
+      setHasUnreadNotifications(true);
+    }
+  }, [aiInsights, lastSeenNotificationCount]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -204,6 +215,8 @@ const getEnergyState = (score: number | null): EnergyState => {
   const hydrationGlasses = healthData?.hydrationGlasses || 0;
   const energyState = getEnergyState(energyScore);
   const weeklyDays = weeklyData?.weekData || [];
+  const notificationCount = aiInsights?.length || 0;
+  const hasNotifications = notificationCount > 0;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top, backgroundColor: colors.background }]}>
@@ -220,6 +233,21 @@ const getEnergyState = (score: number | null): EnergyState => {
                 <Text style={styles.userName}>{user?.name?.split(' ')[0] || 'there'}</Text>
               </View>
               <View style={styles.headerRight}>
+                <TouchableOpacity
+                  style={styles.notificationButton}
+                  activeOpacity={0.85}
+                  onPress={() => {
+                    setNotificationModalVisible(true);
+                    setHasUnreadNotifications(false);
+                    setLastSeenNotificationCount(notificationCount);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel="View notifications"
+                  hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
+                >
+                  <Ionicons name="notifications-outline" size={20} color={colors.text} />
+                  {hasNotifications && hasUnreadNotifications && <View style={styles.notificationBadge} />}
+                </TouchableOpacity>
                 <View style={styles.dateContainer}>
                   <Text style={styles.dateDay}>
                     {new Date().toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()}
@@ -785,6 +813,50 @@ const getEnergyState = (score: number | null): EnergyState => {
           </View>
         </View>
       </Modal>
+
+      {/* Notifications modal */}
+      <Modal
+        visible={notificationModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setNotificationModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.notificationModal}>
+            <View style={styles.modalHandle} />
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Notifications</Text>
+              <TouchableOpacity onPress={() => setNotificationModalVisible(false)}>
+                <Ionicons name="close" size={22} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            {hasNotifications ? (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {aiInsights.map((item: any, idx: number) => (
+                  <View key={idx} style={styles.notificationItem}>
+                    <View style={styles.notificationDot} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.notificationTitle}>{item.name || item.title || 'Insight'}</Text>
+                      {item.reasoning || item.description ? (
+                        <Text style={styles.notificationBody} numberOfLines={3}>
+                          {item.reasoning || item.description}
+                        </Text>
+                      ) : null}
+                    </View>
+                  </View>
+                ))}
+              </ScrollView>
+            ) : (
+              <View style={styles.emptyNotifications}>
+                <Ionicons name="notifications-off-outline" size={32} color={colors.textLight} />
+                <Text style={styles.emptyNotificationsText}>No notifications yet</Text>
+                <Text style={styles.emptyNotificationsSub}>Check back after new insights arrive.</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -859,7 +931,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerRight: {
-    alignItems: 'flex-end',
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
   },
   greetingSmall: {
     fontSize: 15,
@@ -873,6 +947,111 @@ const styles = StyleSheet.create({
     color: colors.text,
     letterSpacing: -0.5,
     marginTop: 2,
+  },
+  notificationButton: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: '#ffffff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#0f2822',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 4,
+    position: 'relative',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#f97316',
+    borderWidth: 2,
+    borderColor: '#ffffff',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    justifyContent: 'flex-end',
+  },
+  notificationModal: {
+    backgroundColor: '#ffffff',
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
+    paddingTop: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xl,
+    maxHeight: '75%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  modalHandle: {
+    alignSelf: 'center',
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.glassBorder,
+    marginBottom: spacing.md,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  notificationItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.glassBorder,
+  },
+  notificationDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#f97316',
+    marginTop: 6,
+  },
+  notificationTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 2,
+  },
+  notificationBody: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    lineHeight: 18,
+  },
+  emptyNotifications: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.xl,
+    gap: spacing.sm,
+  },
+  emptyNotificationsText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  emptyNotificationsSub: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    textAlign: 'center',
   },
   dateContainer: {
     backgroundColor: colors.primary,

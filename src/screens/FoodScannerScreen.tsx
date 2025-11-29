@@ -12,16 +12,14 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
-  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { Camera, CameraView } from 'expo-camera';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { colors } from '../constants/theme';
 import api, { foodAPI } from '../services/api';
-
-const { width } = Dimensions.get('window');
 
 interface FoodAnalysis {
   description: string;
@@ -59,6 +57,9 @@ export default function FoodScannerScreen() {
   const [manualFat, setManualFat] = useState('');
   const [isEstimated, setIsEstimated] = useState(false);
   const [estimating, setEstimating] = useState(false);
+  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  const [capturing, setCapturing] = useState(false);
+  const cameraRef = useRef<CameraView | null>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -78,6 +79,14 @@ export default function FoodScannerScreen() {
         useNativeDriver: true,
       }),
     ]).start();
+  }, []);
+
+  // Ask for camera permission upfront for embedded preview
+  useEffect(() => {
+    (async () => {
+      const { status } = await Camera.requestCameraPermissionsAsync();
+      setHasCameraPermission(status === 'granted');
+    })();
   }, []);
 
   // Pulse animation for analyze button
@@ -101,6 +110,36 @@ export default function FoodScannerScreen() {
       return () => pulse.stop();
     }
   }, [image, analysis]);
+
+  const requestCameraPermission = async () => {
+    const { status } = await Camera.requestCameraPermissionsAsync();
+    setHasCameraPermission(status === 'granted');
+    if (status !== 'granted') {
+      Alert.alert('Permission Required', 'Please allow camera access to scan food.');
+    }
+  };
+
+  const capturePhoto = async () => {
+    if (!cameraRef.current || capturing) return;
+    setCapturing(true);
+    try {
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 0.7,
+        base64: false,
+      });
+      if (photo?.uri) {
+        setImage(photo.uri);
+        setAnalysis(null);
+        setUnclearResult(null);
+        setShowManualInput(false);
+      }
+    } catch (err) {
+      console.error('Camera capture error:', err);
+      Alert.alert('Error', 'Could not capture photo. Please try again.');
+    } finally {
+      setCapturing(false);
+    }
+  };
 
   const pickImage = async (useCamera: boolean) => {
     const permission = useCamera
@@ -392,98 +431,97 @@ export default function FoodScannerScreen() {
       >
         {/* Premium Initial Screen */}
         {!image && !showManualInput ? (
-          <Animated.View style={[styles.heroContainer, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
-            {/* Hero Section */}
-            <View style={styles.heroSection}>
-              <View style={styles.heroIconContainer}>
-                <View style={styles.heroIconGradient}>
-                  <Ionicons name="restaurant" size={56} color="#fff" />
-                </View>
-              </View>
-              
-              <Text style={styles.heroTitle}>AI Food Scanner</Text>
-              <Text style={styles.heroSubtitle}>
-                Snap a photo and let AI analyze your meal's nutrition instantly
-              </Text>
+          <Animated.View style={{ opacity: fadeAnim, transform: [{ scale: scaleAnim }], gap: 16 }}>
+            <View style={styles.cameraShell}>
+              <LinearGradient
+                colors={['#f4f8f2', '#eef4ef']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.cameraBackdrop}
+              >
+                <View style={styles.cameraFrame}>
+                  {hasCameraPermission === false && (
+                    <View style={styles.cameraPermission}>
+                      <Ionicons name="lock-closed" size={22} color={colors.textLight} />
+                      <Text style={styles.cameraPermissionTitle}>Camera access needed</Text>
+                      <Text style={styles.cameraPermissionText}>
+                        Allow camera to scan your meal directly.
+                      </Text>
+                      <TouchableOpacity style={styles.permissionButton} onPress={requestCameraPermission}>
+                        <Text style={styles.permissionButtonText}>Allow camera</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
 
-              {/* Feature Pills */}
-              <View style={styles.featurePills}>
-                <View style={styles.featurePill}>
-                  <Ionicons name="flash" size={14} color={colors.accent} />
-                  <Text style={styles.featurePillText}>Instant</Text>
+                  {hasCameraPermission === null && (
+                    <View style={styles.cameraPermission}>
+                      <ActivityIndicator color={colors.primary} />
+                      <Text style={styles.cameraPermissionText}>Preparing camera…</Text>
+                    </View>
+                  )}
+
+                  {hasCameraPermission === true && (
+                    <>
+                      <CameraView
+                        ref={(ref) => (cameraRef.current = ref)}
+                        style={styles.cameraPreview}
+                        facing="back"
+                        ratio="4:3"
+                      />
+                      <View style={[styles.frameCorner, styles.frameCornerTL]} />
+                      <View style={[styles.frameCorner, styles.frameCornerTR]} />
+                      <View style={[styles.frameCorner, styles.frameCornerBL]} />
+                      <View style={[styles.frameCorner, styles.frameCornerBR]} />
+                    </>
+                  )}
                 </View>
-                <View style={styles.featurePill}>
-                  <Ionicons name="analytics" size={14} color={colors.primary} />
-                  <Text style={styles.featurePillText}>Accurate</Text>
-                </View>
-                <View style={styles.featurePill}>
-                  <Ionicons name="leaf" size={14} color={colors.primaryLight} />
-                  <Text style={styles.featurePillText}>Smart</Text>
-                </View>
-              </View>
+              </LinearGradient>
             </View>
 
-            {/* Action Cards */}
-            <View style={styles.actionCardsContainer}>
-              {/* Camera Card - Primary */}
-              <TouchableOpacity
-                style={styles.primaryActionCard}
-                onPress={() => pickImage(true)}
-                activeOpacity={0.9}
-              >
-                <LinearGradient
-                  colors={[colors.primary, '#1a5c45']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.primaryCardGradient}
+            <View style={styles.bottomActionCard}>
+              <Text style={styles.bottomActionTitle}>Add a meal</Text>
+              <Text style={styles.bottomActionSubtitle}>Center the plate and snap, or choose another way to add</Text>
+
+              <View style={styles.bottomButtonsRow}>
+                <TouchableOpacity
+                  style={styles.bottomButton}
+                  onPress={() => pickImage(false)}
+                  activeOpacity={0.9}
                 >
-                  <View style={styles.primaryCardContent}>
-                    <View style={styles.primaryIconWrapper}>
-                      <Ionicons name="camera" size={32} color="#fff" />
-                    </View>
-                    <View style={styles.primaryCardText}>
-                      <Text style={styles.primaryCardTitle}>Take Photo</Text>
-                      <Text style={styles.primaryCardSubtitle}>Use camera to scan food</Text>
-                    </View>
-                    <Ionicons name="arrow-forward-circle" size={28} color="rgba(255,255,255,0.8)" />
-                  </View>
-                </LinearGradient>
-              </TouchableOpacity>
+                  <Ionicons name="images-outline" size={18} color={colors.primary} />
+                  <Text style={styles.bottomButtonText}>Choose from gallery</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.bottomButton, styles.bottomButtonGhost]}
+                  onPress={() => setShowManualInput(true)}
+                  activeOpacity={0.9}
+                >
+                  <Ionicons name="create-outline" size={18} color={colors.text} />
+                  <Text style={[styles.bottomButtonText, { color: colors.text }]}>Enter manually</Text>
+                </TouchableOpacity>
+              </View>
 
-              {/* Gallery Card - Secondary */}
-              <TouchableOpacity
-                style={styles.secondaryActionCard}
-                onPress={() => pickImage(false)}
-                activeOpacity={0.9}
-              >
-                <View style={styles.secondaryCardContent}>
-                  <View style={styles.secondaryIconWrapper}>
-                    <Ionicons name="images" size={28} color={colors.primary} />
-                  </View>
-                  <View style={styles.secondaryCardText}>
-                    <Text style={styles.secondaryCardTitle}>Choose from Gallery</Text>
-                    <Text style={styles.secondaryCardSubtitle}>Select existing photo</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={24} color={colors.textLight} />
-                </View>
-              </TouchableOpacity>
-
-              {/* Manual Entry Option */}
-              <TouchableOpacity
-                style={styles.manualEntryCard}
-                onPress={() => setShowManualInput(true)}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="create-outline" size={20} color={colors.textLight} />
-                <Text style={styles.manualEntryText}>Or enter manually</Text>
-              </TouchableOpacity>
+              <View style={styles.bottomInfoRow}>
+                <Ionicons name="shield-checkmark" size={16} color={colors.success} />
+                <Text style={styles.bottomInfoText}>Your photos are analyzed securely and never stored.</Text>
+              </View>
             </View>
 
-            {/* Bottom Info */}
-            <View style={styles.bottomInfo}>
-              <Ionicons name="shield-checkmark" size={16} color={colors.success} />
-              <Text style={styles.bottomInfoText}>Your photos are analyzed securely and never stored</Text>
-            </View>
+            {hasCameraPermission === true && (
+              <View style={styles.cameraControls}>
+                <TouchableOpacity
+                  style={[styles.shutterButton, capturing && { opacity: 0.6 }]}
+                  onPress={capturePhoto}
+                  disabled={capturing}
+                >
+                  {capturing ? (
+                    <ActivityIndicator color={colors.primary} />
+                  ) : (
+                    <View style={styles.shutterInner} />
+                  )}
+                </TouchableOpacity>
+              </View>
+            )}
           </Animated.View>
         ) : !image && showManualInput ? (
           /* Manual Entry Full Screen */
@@ -828,170 +866,196 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
     flexGrow: 1,
   },
-  // Premium Hero Styles
-  heroContainer: {
-    flex: 1,
-    minHeight: 600,
+  // Camera-first layout
+  cameraShell: {
+    borderRadius: 28,
+    overflow: 'hidden',
+    shadowColor: colors.shadow,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    elevation: 8,
   },
-  heroSection: {
-    alignItems: 'center',
-    paddingTop: 20,
-    paddingBottom: 32,
+  cameraBackdrop: {
+    padding: 12,
+    borderRadius: 28,
   },
-  heroIconContainer: {
-    position: 'relative',
-    marginBottom: 24,
-  },
-  heroIconGradient: {
-    width: 120,
-    height: 120,
-    borderRadius: 36,
+  cameraFrame: {
+    height: 340,
+    borderRadius: 24,
+    backgroundColor: '#0f282205',
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'relative',
+  },
+  cameraPreview: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  frameOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255,255,255,0.35)',
+  },
+  frameCorner: {
+    position: 'absolute',
+    width: 26,
+    height: 26,
+    borderWidth: 3,
+    borderColor: '#ffffff',
+    borderRadius: 6,
+  },
+  frameCornerTL: {
+    top: 16,
+    left: 16,
+    borderRightWidth: 0,
+    borderBottomWidth: 0,
+  },
+  frameCornerTR: {
+    top: 16,
+    right: 16,
+    borderLeftWidth: 0,
+    borderBottomWidth: 0,
+  },
+  frameCornerBL: {
+    bottom: 16,
+    left: 16,
+    borderRightWidth: 0,
+    borderTopWidth: 0,
+  },
+  frameCornerBR: {
+    bottom: 16,
+    right: 16,
+    borderLeftWidth: 0,
+    borderTopWidth: 0,
+  },
+  cameraIconBadge: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     backgroundColor: colors.primary,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.35,
-    shadowRadius: 20,
-    elevation: 15,
-  },
-  heroTitle: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: colors.text,
-    marginBottom: 12,
-    letterSpacing: -0.5,
-  },
-  heroSubtitle: {
-    fontSize: 16,
-    color: colors.textLight,
-    textAlign: 'center',
-    lineHeight: 24,
-    paddingHorizontal: 20,
-    marginBottom: 20,
-  },
-  featurePills: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  featurePill: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#fff',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  featurePillText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  actionCardsContainer: {
-    gap: 12,
-    marginBottom: 24,
-  },
-  primaryActionCard: {
-    borderRadius: 20,
-    overflow: 'hidden',
+    justifyContent: 'center',
+    marginBottom: 6,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 10,
-  },
-  primaryCardGradient: {
-    padding: 20,
-  },
-  primaryCardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  primaryIconWrapper: {
-    width: 60,
-    height: 60,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
-  },
-  primaryCardText: {
-    flex: 1,
-  },
-  primaryCardTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#fff',
-    marginBottom: 4,
-  },
-  primaryCardSubtitle: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.8)',
-  },
-  secondaryActionCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.25,
     shadowRadius: 12,
-    elevation: 4,
+    elevation: 6,
   },
-  secondaryCardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 18,
-  },
-  secondaryIconWrapper: {
-    width: 50,
-    height: 50,
-    borderRadius: 14,
-    backgroundColor: `${colors.primary}12`,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 14,
-  },
-  secondaryCardText: {
-    flex: 1,
-  },
-  secondaryCardTitle: {
-    fontSize: 17,
-    fontWeight: '600',
+  cameraTitle: {
+    fontSize: 18,
+    fontWeight: '700',
     color: colors.text,
-    marginBottom: 2,
   },
-  secondaryCardSubtitle: {
+  cameraSubtitle: {
     fontSize: 13,
     color: colors.textLight,
   },
-  manualEntryCard: {
-    flexDirection: 'row',
+  cameraControls: {
+    paddingVertical: 22,
+    marginTop: 12,
+    alignItems: 'center',
+  },
+  shutterButton: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 16,
-    marginTop: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    elevation: 6,
   },
-  manualEntryText: {
-    fontSize: 15,
+  shutterInner: {
+    width: 82,
+    height: 82,
+    borderRadius: 41,
+    backgroundColor: colors.primary,
+  },
+  cameraPermission: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingHorizontal: 24,
+  },
+  cameraPermissionTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  cameraPermissionText: {
+    fontSize: 13,
     color: colors.textLight,
-    fontWeight: '500',
+    textAlign: 'center',
   },
-  bottomInfo: {
+  permissionButton: {
+    marginTop: 4,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 14,
+    backgroundColor: colors.primary,
+  },
+  permissionButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  bottomActionCard: {
+    backgroundColor: '#fff',
+    borderRadius: 22,
+    padding: 18,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  bottomActionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  bottomActionSubtitle: {
+    fontSize: 13,
+    color: colors.textLight,
+  },
+  bottomButtonsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  bottomButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    paddingTop: 16,
-    paddingBottom: 8,
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: `${colors.primary}12`,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+  },
+  bottomButtonGhost: {
+    backgroundColor: '#fff',
+    borderColor: colors.glassBorder,
+  },
+  bottomButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  bottomInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingTop: 4,
   },
   bottomInfoText: {
     fontSize: 12,
